@@ -20,6 +20,8 @@ var (
 	hciID       = flag.Int("hci_device_id", -1, "HCI device to use. -1 probes everything.")
 	pointPeriod = flag.Duration("point_period", 5*time.Second, "How often to report a point.")
 
+	humanNames = flag.String("human_names", "", "Comma-separated list of human_name@mac pairs.")
+
 	logToStdout = flag.Bool("log_to_stdout", false, "Whether to log readings to STDOUT.")
 
 	logToInflux            = flag.Bool("log_to_influx", false, "Whether to log readings to InfluxDB.")
@@ -38,6 +40,17 @@ func main() {
 	ctx := context.Background()
 
 	buf := data.NewBuffer(5)
+
+	for _, pair := range strings.Split(*humanNames, ",") {
+		if pair == "" {
+			continue
+		}
+		if !strings.Contains(pair, "@") {
+			log.Fatalf("human_names contains invalid entry: %q", pair)
+		}
+		hm := strings.Split(pair, "@")
+		data.RegisterHumanName(hm[1], hm[0])
+	}
 
 	go func() {
 		if err := bluetooth.Run(ctx, *hciID, func(p gatt.Peripheral, a *gatt.Advertisement, rssi int) {
@@ -79,7 +92,7 @@ func main() {
 		for now := range time.Tick(*pointPeriod) {
 			pts := buf.PullAll(now)
 			sort.Slice(pts, func(i, j int) bool {
-				return strings.Compare(pts[i].Address, pts[j].Address) < 0
+				return strings.Compare(pts[i].Name(), pts[j].Name()) < 0
 			})
 			for _, out := range outputs {
 				out.Push(pts)

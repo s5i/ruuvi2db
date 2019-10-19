@@ -96,7 +96,7 @@ func (idb *influxDB) Run(ctx context.Context, connection, database, table string
 				pt, err := influxdb.NewPoint(
 					idb.table,
 					map[string]string{
-						"address": p.Address,
+						"name": p.Name(),
 					},
 					map[string]interface{}{
 						"temperature": p.Temperature,
