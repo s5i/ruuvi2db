@@ -22,7 +22,7 @@ func LinearExtrapolate(p []Point, wantTimestamp time.Time) (Point, error) {
 		seenTs[p.Timestamp] = true
 	}
 
-	if len(p) < 2 {
+	if len(pts) < 2 {
 		return Point{}, errors.New("need at least 2 points with unique timestamps")
 	}
 
