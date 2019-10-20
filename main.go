@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"sort"
 	"strings"
@@ -33,11 +34,17 @@ var (
 	influxPrecision        = flag.String("influx_precision", "s", "Precision specified when pushing data to InfluxDB.")
 	influxRetentionPolicy  = flag.String("influx_retention_policy", "", "Retention policy specified when pushing data to InfluxDB.")
 	influxWriteConsistency = flag.String("influx_write_consistency", "", "Write consistency specified when pushing data to InfluxDB.")
+
+	debug = flag.Bool("debug", false, "Whether to show debug messages (log package).")
 )
 
 func main() {
 	flag.Parse()
 	ctx := context.Background()
+
+	if !(*debug) {
+		log.SetOutput(ioutil.Discard)
+	}
 
 	buf := data.NewBuffer(5)
 
