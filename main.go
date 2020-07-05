@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paypal/gatt"
 	"github.com/s5i/ruuvi2db/bluetooth"
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/db/influx"
@@ -60,8 +59,8 @@ func main() {
 	}
 
 	go func() {
-		if err := bluetooth.Run(ctx, *hciID, func(p gatt.Peripheral, a *gatt.Advertisement, rssi int) {
-			res, err := protocol.ParseDatagram(a.ManufacturerData, p.ID())
+		if err := bluetooth.Run(ctx, *hciID, func(addr string, data []byte) {
+			res, err := protocol.ParseDatagram(data, addr)
 			if err != nil {
 				return
 			}
