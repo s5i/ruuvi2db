@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type Point struct {
 
 // Name returns Point's human name (if available) or its address.
 func (d Point) Name() string {
-	if n := humanNames[d.Address]; n != "" {
+	if n := humanNames[strings.ToLower(d.Address)]; n != "" {
 		return n
 	}
 	return d.Address
