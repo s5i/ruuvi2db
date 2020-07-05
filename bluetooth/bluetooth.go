@@ -4,39 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/paypal/gatt"
+	"github.com/go-ble/ble"
+	"github.com/go-ble/ble/linux"
 )
 
 func Run(ctx context.Context, hciID int, callback func(addr string, data []byte)) error {
-	d, err := gatt.NewDevice(gatt.LnxMaxConnections(1), gatt.LnxDeviceID(hciID, true))
+	opts := []ble.Option{}
+	if hciID >= 0 {
+		opts = append(opts, ble.OptDeviceID(hciID))
+	}
+	d, err := linux.NewDevice(opts...)
 	if err != nil {
-		return fmt.Errorf("gatt.NewDevice failed: %v", err)
+		return fmt.Errorf("linux.NewDevice failed: %v", err)
 	}
-
-	d.Handle(gatt.PeripheralDiscovered(func(p gatt.Peripheral, a *gatt.Advertisement, rssi int) {
-		callback(p.ID(), a.ManufacturerData)
-	}))
-
-	powerOn := make(chan gatt.Device)
-	powerOff := make(chan gatt.Device)
-
-	d.Init(func(d gatt.Device, s gatt.State) {
-		if s == gatt.StatePoweredOn {
-			powerOn <- d
-		}
-		if s == gatt.StatePoweredOff {
-			powerOff <- d
-		}
-	})
-
-	for {
-		select {
-		case d := <-powerOn:
-			d.Scan(nil, true)
-		case d := <-powerOff:
-			d.StopScanning()
-		case <-ctx.Done():
-			return nil
-		}
-	}
+	return d.Scan(ctx, false,
+		func(a ble.Advertisement) {
+			callback(a.Addr().String(), a.ManufacturerData())
+		})
 }
