@@ -23,16 +23,7 @@ var (
 	humanNames = flag.String("human_names", "", "Comma-separated list of human_name@mac pairs.")
 
 	logToStdout = flag.Bool("log_to_stdout", false, "Whether to log readings to STDOUT.")
-
-	logToInflux            = flag.Bool("log_to_influx", false, "Whether to log readings to InfluxDB.")
-	influxConnection       = flag.String("influx_connection", "http://localhost:8086", "InfluxDB connection string.")
-	influxDatabase         = flag.String("influx_database", "ruuvi", "InfluxDB database.")
-	influxTable            = flag.String("influx_table", "ruuvi", "InfluxDB table.")
-	influxUsername         = flag.String("influx_username", "", "Username used to connect to InfluxDB.")
-	influxPassword         = flag.String("influx_password", "", "Password used to connect to InfluxDB.")
-	influxPrecision        = flag.String("influx_precision", "s", "Precision specified when pushing data to InfluxDB.")
-	influxRetentionPolicy  = flag.String("influx_retention_policy", "", "Retention policy specified when pushing data to InfluxDB.")
-	influxWriteConsistency = flag.String("influx_write_consistency", "", "Write consistency specified when pushing data to InfluxDB.")
+	logToInflux = flag.Bool("log_to_influx", false, "Whether to log readings to InfluxDB.")
 
 	debug = flag.Bool("debug", false, "Whether to show debug messages (log package).")
 )
@@ -82,12 +73,7 @@ func main() {
 	if *logToInflux {
 		db := influx.NewDB()
 		go func() {
-			if err := db.Run(ctx, *influxConnection, *influxDatabase, *influxTable,
-				influx.WithUsername(*influxUsername),
-				influx.WithPassword(*influxPassword),
-				influx.WithPrecision(*influxPrecision),
-				influx.WithRetentionPolicy(*influxRetentionPolicy),
-				influx.WithWriteConsistency(*influxWriteConsistency)); err != nil {
+			if err := db.RunWithFlagOptions(ctx); err != nil {
 				log.Fatalf("influx: db.Run failed: %v", err)
 			}
 		}()

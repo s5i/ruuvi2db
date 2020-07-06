@@ -2,12 +2,24 @@ package influx
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 
 	_ "github.com/influxdata/influxdb1-client"
 	influxdb "github.com/influxdata/influxdb1-client/v2"
 	"github.com/s5i/ruuvi2db/data"
+)
+
+var (
+	influxConnection       = flag.String("influx_connection", "http://localhost:8086", "InfluxDB connection string.")
+	influxDatabase         = flag.String("influx_database", "ruuvi", "InfluxDB database.")
+	influxTable            = flag.String("influx_table", "ruuvi", "InfluxDB table.")
+	influxUsername         = flag.String("influx_username", "", "Username used to connect to InfluxDB.")
+	influxPassword         = flag.String("influx_password", "", "Password used to connect to InfluxDB.")
+	influxPrecision        = flag.String("influx_precision", "s", "Precision specified when pushing data to InfluxDB.")
+	influxRetentionPolicy  = flag.String("influx_retention_policy", "", "Retention policy specified when pushing data to InfluxDB.")
+	influxWriteConsistency = flag.String("influx_write_consistency", "", "Write consistency specified when pushing data to InfluxDB.")
 )
 
 // NewDB returns an object that can be used to connect and push to Influx DB.
@@ -17,44 +29,18 @@ func NewDB() *influxDB {
 	}
 }
 
-// WithUsername causes Run to use a given username to connect to DB.
-func WithUsername(u string) runOption {
-	return func(idb *influxDB) error {
-		idb.username = u
-		return nil
-	}
-}
-
-// WithPassword causes Run to use a given password to connect to DB.
-func WithPassword(p string) runOption {
-	return func(idb *influxDB) error {
-		idb.password = p
-		return nil
-	}
-}
-
-// WithPrecision causes Run to use a given precision when pushing to DB (default is seconds).
-func WithPrecision(p string) runOption {
-	return func(idb *influxDB) error {
-		idb.precision = p
-		return nil
-	}
-}
-
-// WithRetentionPolicy causes Run to use a given retention policy when pushing to DB.
-func WithRetentionPolicy(rp string) runOption {
-	return func(idb *influxDB) error {
-		idb.retentionPolicy = rp
-		return nil
-	}
-}
-
-// WithWriteConsistency causes Run to use a given write consistency when pushing to DB.
-func WithWriteConsistency(wc string) runOption {
-	return func(idb *influxDB) error {
-		idb.writeConsistency = wc
-		return nil
-	}
+// RunWithFlagOptions starts a connection to DB and handles Push calls.
+// The arguments passed onto Run are taken from influx_* flags.
+func (idb *influxDB) RunWithFlagOptions(ctx context.Context) error {
+	return idb.Run(ctx,
+		*influxConnection,
+		*influxDatabase,
+		*influxTable,
+		WithUsername(*influxUsername),
+		WithPassword(*influxPassword),
+		WithPrecision(*influxPrecision),
+		WithRetentionPolicy(*influxRetentionPolicy),
+		WithWriteConsistency(*influxWriteConsistency))
 }
 
 // Run starts a connection to DB and handles Push calls.
@@ -139,5 +125,3 @@ type influxDB struct {
 	retentionPolicy  string
 	writeConsistency string
 }
-
-type runOption func(*influxDB) error
