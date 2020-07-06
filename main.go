@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"sort"
@@ -12,7 +11,9 @@ import (
 
 	"github.com/s5i/ruuvi2db/bluetooth"
 	"github.com/s5i/ruuvi2db/data"
+	"github.com/s5i/ruuvi2db/db"
 	"github.com/s5i/ruuvi2db/db/influx"
+	"github.com/s5i/ruuvi2db/db/iowriter"
 	"github.com/s5i/ruuvi2db/protocol"
 )
 
@@ -61,13 +62,10 @@ func main() {
 		}
 	}()
 
-	type output interface {
-		Push(points []data.Point)
-	}
-	outputs := []output{}
+	outputs := []db.Interface{}
 
 	if *logToStdout {
-		outputs = append(outputs, &stdout{})
+		outputs = append(outputs, iowriter.NewStdout())
 	}
 
 	if *logToInflux {
@@ -93,13 +91,4 @@ func main() {
 	}()
 
 	select {}
-}
-
-type stdout struct{}
-
-func (s *stdout) Push(points []data.Point) {
-	fmt.Println("---")
-	for _, p := range points {
-		fmt.Println(p)
-	}
 }

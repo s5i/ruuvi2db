@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdata/influxdb1-client"
 	influxdb "github.com/influxdata/influxdb1-client/v2"
 	"github.com/s5i/ruuvi2db/data"
+	"github.com/s5i/ruuvi2db/db"
 )
 
 var (
@@ -125,3 +126,5 @@ type influxDB struct {
 	retentionPolicy  string
 	writeConsistency string
 }
+
+var _ db.Interface = (*influxDB)(nil)
