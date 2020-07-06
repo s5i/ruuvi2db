@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type buffer struct {
+type Buffer struct {
 	mu       sync.RWMutex
 	readings map[string][]Point
 	nextIdx  map[string]int
@@ -15,11 +15,11 @@ type buffer struct {
 
 // NewBuffer creates a buffer for data point readings.
 // Size specifies how many points should be kept per device address, automatically adjusted to be at least 2.
-func NewBuffer(size int) *buffer {
+func NewBuffer(size int) *Buffer {
 	if size < 2 {
 		size = 2
 	}
-	return &buffer{
+	return &Buffer{
 		readings: map[string][]Point{},
 		nextIdx:  map[string]int{},
 		size:     size,
@@ -27,7 +27,7 @@ func NewBuffer(size int) *buffer {
 }
 
 // Push adds a data point for a given device address.
-func (b *buffer) Push(p Point) {
+func (b *Buffer) Push(p Point) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -44,7 +44,7 @@ func (b *buffer) Push(p Point) {
 }
 
 // Pull returns a data point for a given device address.
-func (b *buffer) Pull(addr string, timestamp time.Time) (Point, error) {
+func (b *Buffer) Pull(addr string, timestamp time.Time) (Point, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -61,7 +61,7 @@ func (b *buffer) Pull(addr string, timestamp time.Time) (Point, error) {
 }
 
 // PullAll returns data points for all known devices.
-func (b *buffer) PullAll(timestamp time.Time) []Point {
+func (b *Buffer) PullAll(timestamp time.Time) []Point {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

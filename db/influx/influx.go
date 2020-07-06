@@ -2,25 +2,14 @@ package influx
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 
 	_ "github.com/influxdata/influxdb1-client"
 	influxdb "github.com/influxdata/influxdb1-client/v2"
+	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/db"
-)
-
-var (
-	influxConnection       = flag.String("influx_connection", "http://localhost:8086", "InfluxDB connection string.")
-	influxDatabase         = flag.String("influx_database", "ruuvi", "InfluxDB database.")
-	influxTable            = flag.String("influx_table", "ruuvi", "InfluxDB table.")
-	influxUsername         = flag.String("influx_username", "", "Username used to connect to InfluxDB.")
-	influxPassword         = flag.String("influx_password", "", "Password used to connect to InfluxDB.")
-	influxPrecision        = flag.String("influx_precision", "s", "Precision specified when pushing data to InfluxDB.")
-	influxRetentionPolicy  = flag.String("influx_retention_policy", "", "Retention policy specified when pushing data to InfluxDB.")
-	influxWriteConsistency = flag.String("influx_write_consistency", "", "Write consistency specified when pushing data to InfluxDB.")
 )
 
 // NewDB returns an object that can be used to connect and push to Influx DB.
@@ -30,18 +19,32 @@ func NewDB() *influxDB {
 	}
 }
 
-// RunWithFlagOptions starts a connection to DB and handles Push calls.
-// The arguments passed onto Run are taken from influx_* flags.
-func (idb *influxDB) RunWithFlagOptions(ctx context.Context) error {
+// RunWithConfig starts a connection to DB and handles Push calls.
+// The arguments passed onto Run are taken from config proto.
+func (idb *influxDB) RunWithConfig(ctx context.Context, cfg *config.Config) error {
+	opts := []runOption{}
+
+	if u := cfg.GetInfluxDb().Username; u != "" {
+		opts = append(opts, WithUsername(u))
+	}
+	if p := cfg.GetInfluxDb().Password; p != "" {
+		opts = append(opts, WithPassword(p))
+	}
+	if p := cfg.GetInfluxDb().Precision; p != "" {
+		opts = append(opts, WithPrecision(p))
+	}
+	if rp := cfg.GetInfluxDb().RetentionPolicy; rp != "" {
+		opts = append(opts, WithRetentionPolicy(rp))
+	}
+	if wc := cfg.GetInfluxDb().WriteConsistency; wc != "" {
+		opts = append(opts, WithWriteConsistency(wc))
+	}
+
 	return idb.Run(ctx,
-		*influxConnection,
-		*influxDatabase,
-		*influxTable,
-		WithUsername(*influxUsername),
-		WithPassword(*influxPassword),
-		WithPrecision(*influxPrecision),
-		WithRetentionPolicy(*influxRetentionPolicy),
-		WithWriteConsistency(*influxWriteConsistency))
+		cfg.GetInfluxDb().Connection,
+		cfg.GetInfluxDb().Database,
+		cfg.GetInfluxDb().Table,
+		opts...)
 }
 
 // Run starts a connection to DB and handles Push calls.

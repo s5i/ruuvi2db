@@ -1,0 +1,29 @@
+package config
+
+const ExampleConfig = `general {
+	enable_debug_logs: false
+	max_refresh_rate_sec: 300
+	buffer_size: 5
+	log_to_stdout: true
+	log_to_influx: false
+}
+
+bluetooth {
+	hci_id: -1
+}
+
+devices {
+	ruuvi_tag { mac: "89-75-AE-8B-52-D9" human_name: "Living Room" }
+	ruuvi_tag { mac: "47-36-DA-4A-9F-F6" human_name: "Bedroom" }
+}
+
+influx_db {
+	connection: "http://localhost:8086"
+	database: "ruuvi"
+	table: "ruuvi"
+	username: ""
+	password: ""
+	precision: "s"
+	retention_policy: ""
+	write_consistency: ""
+}`

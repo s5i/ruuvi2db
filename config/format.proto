@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+option go_package = "github.com/s5i/ruuvi2db/config";
+
+message Config {
+	General general = 1;
+	Bluetooth bluetooth = 2;
+	Devices devices = 3;
+
+	InfluxDB influx_db = 100;
+}
+
+message General {
+	bool enable_debug_logs = 1;
+	int64 max_refresh_rate_sec = 2;
+	int64 buffer_size = 3;
+
+	bool log_to_stdout = 100;
+	bool log_to_influx = 101;
+}
+
+message Bluetooth {
+	int64 hci_id = 1;
+}
+
+message Devices {
+	message RuuviTag {
+		string mac = 1;
+		string human_name = 2;
+	}
+	repeated RuuviTag ruuvi_tag = 1;
+}
+
+message InfluxDB {
+	string connection = 1;
+	string database = 2;
+	string table = 3;
+	string username = 4; 
+	string password = 5;
+	string precision = 6;
+	string retention_policy = 7;
+	string write_consistency = 8;
+}
