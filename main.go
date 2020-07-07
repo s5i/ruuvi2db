@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/s5i/ruuvi2db/bluetooth"
@@ -27,7 +29,9 @@ var (
 
 func main() {
 	flag.Parse()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	defer wg.Wait()
 
 	cfgPath := config.Path(*configPathOverride)
 	if *createConfig {
@@ -40,20 +44,31 @@ func main() {
 	setupHumanNames(cfg)
 
 	buffer := data.NewBuffer(int(cfg.GetGeneral().BufferSize))
-	go runBluetooth(ctx, cfg, buffer)
+	wg.Add(1)
+	go func() {
+		runBluetooth(ctx, cfg, buffer)
+		wg.Done()
+	}()
 
 	outputs := setupOutputs(ctx, cfg)
-	go refreshLoop(ctx, cfg, buffer, outputs)
+	wg.Add(1)
+	go func() {
+		refreshLoop(ctx, cfg, buffer, outputs)
+		wg.Done()
+	}()
 
-	select {}
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt)
+	<-sigint
+	cancel()
 }
 
 func createConfigAndExit(path string) {
 	if err := config.CreateExample(path); err != nil {
-		fmt.Printf("Aborting: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Aborting: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Wrote example config to %s\n", path)
+	fmt.Fprintf(os.Stderr, "Wrote example config to %s\n", path)
 	os.Exit(0)
 }
 
@@ -63,12 +78,12 @@ func readConfigOrExit(path string) *config.Config {
 		return cfg
 	}
 	if os.IsNotExist(err) {
-		fmt.Printf("Config file %s does not exist.\n", path)
-		fmt.Println("To create it, run:")
-		fmt.Printf("%s --create_config [--config_path=...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Config file %s does not exist.\n", path)
+		fmt.Fprintln(os.Stderr, "To create it, run:")
+		fmt.Fprintf(os.Stderr, "%s --create_config [--config_path=...]\n", os.Args[0])
 		os.Exit(2)
 	}
-	fmt.Printf("Aborting: %v\n", err)
+	fmt.Fprintf(os.Stderr, "Aborting: %v\n", err)
 	os.Exit(2)
 
 	return nil
@@ -95,8 +110,8 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 		buffer.Push(*res)
 	}); err != nil {
 		log.Printf("bluetooth.Run failed: %v", err)
-		fmt.Println("Can't run bluetooth; please grant necessary capabilities:")
-		fmt.Printf(`$ sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which %s)"`+"\n", os.Args[0])
+		fmt.Fprintln(os.Stderr, "Can't run bluetooth; please grant necessary capabilities:")
+		fmt.Fprintf(os.Stderr, `$ sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which %s)"`+"\n", os.Args[0])
 		os.Exit(3)
 	}
 }
