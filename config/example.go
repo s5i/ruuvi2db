@@ -6,6 +6,7 @@ const ExampleConfig = `general {
 	buffer_size: 5
 	log_to_stdout: true
 	log_to_influx: false
+	log_to_bolt: false
 }
 
 bluetooth {
@@ -26,4 +27,10 @@ influx_db {
 	precision: "s"
 	retention_policy: ""
 	write_consistency: ""
+}
+
+bolt_db {
+	path: "/tmp/ruuvi.boltdb"
+	bucket_size_sec: 86400
+	retention_sec: 604800
 }`

@@ -17,6 +17,7 @@ import (
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/db"
+	"github.com/s5i/ruuvi2db/db/bolt"
 	"github.com/s5i/ruuvi2db/db/influx"
 	"github.com/s5i/ruuvi2db/db/iowriter"
 	"github.com/s5i/ruuvi2db/protocol"
@@ -128,6 +129,16 @@ func setupOutputs(ctx context.Context, cfg *config.Config) []db.Interface {
 		go func() {
 			if err := db.RunWithConfig(ctx, cfg); err != nil {
 				log.Fatalf("influx: db.RunWithConfig failed: %v", err)
+			}
+		}()
+		outputs = append(outputs, db)
+	}
+
+	if cfg.GetGeneral().LogToBolt {
+		db := bolt.NewDB()
+		go func() {
+			if err := db.RunWithConfig(ctx, cfg); err != nil {
+				log.Fatalf("bolt: db.RunWithConfig failed: %v", err)
 			}
 		}()
 		outputs = append(outputs, db)

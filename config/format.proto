@@ -8,6 +8,7 @@ message Config {
 	Devices devices = 3;
 
 	InfluxDB influx_db = 100;
+	BoltDB bolt_db = 101;
 }
 
 message General {
@@ -17,6 +18,7 @@ message General {
 
 	bool log_to_stdout = 100;
 	bool log_to_influx = 101;
+	bool log_to_bolt = 102;
 }
 
 message Bluetooth {
@@ -40,4 +42,10 @@ message InfluxDB {
 	string precision = 6;
 	string retention_policy = 7;
 	string write_consistency = 8;
+}
+
+message BoltDB {
+	string path = 1;
+	int64 bucket_size_sec = 2;
+	int64 retention_sec = 3;
 }
