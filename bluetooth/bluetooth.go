@@ -17,8 +17,10 @@ func Run(ctx context.Context, hciID int, callback func(addr string, data []byte)
 	if err != nil {
 		return fmt.Errorf("linux.NewDevice failed: %v", err)
 	}
-	return d.Scan(ctx, false,
-		func(a ble.Advertisement) {
-			callback(a.Addr().String(), a.ManufacturerData())
-		})
+	if err := d.Scan(ctx, false, func(a ble.Advertisement) {
+		callback(a.Addr().String(), a.ManufacturerData())
+	}); err != nil && err != context.Canceled {
+		return err
+	}
+	return nil
 }
