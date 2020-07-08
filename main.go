@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sort"
@@ -20,12 +21,19 @@ import (
 	"github.com/s5i/ruuvi2db/db/bolt"
 	"github.com/s5i/ruuvi2db/db/influx"
 	"github.com/s5i/ruuvi2db/db/iowriter"
+	"github.com/s5i/ruuvi2db/plot"
 	"github.com/s5i/ruuvi2db/protocol"
 )
 
 var (
 	configPathOverride = flag.String("config_path", "", "Path to config file.")
 	createConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
+)
+
+var (
+	StdoutDB = "stdout"
+	InfluxDB = "influx"
+	BoltDB   = "bolt"
 )
 
 func main() {
@@ -51,10 +59,16 @@ func main() {
 		wg.Done()
 	}()
 
-	outputs := setupOutputs(ctx, cfg)
+	dbs := setupDBs(ctx, cfg)
 	wg.Add(1)
 	go func() {
-		refreshLoop(ctx, cfg, buffer, outputs)
+		refreshLoop(ctx, cfg, buffer, dbs)
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		maybeHandleHTTP(ctx, cfg, dbs)
 		wg.Done()
 	}()
 
@@ -117,11 +131,11 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 	}
 }
 
-func setupOutputs(ctx context.Context, cfg *config.Config) []db.Interface {
-	outputs := []db.Interface{}
+func setupDBs(ctx context.Context, cfg *config.Config) map[string]db.Interface {
+	dbs := map[string]db.Interface{}
 
 	if cfg.GetGeneral().LogToStdout {
-		outputs = append(outputs, iowriter.NewStdout())
+		dbs[StdoutDB] = iowriter.NewStdout()
 	}
 
 	if cfg.GetGeneral().LogToInflux {
@@ -131,7 +145,7 @@ func setupOutputs(ctx context.Context, cfg *config.Config) []db.Interface {
 				log.Fatalf("influx: db.RunWithConfig failed: %v", err)
 			}
 		}()
-		outputs = append(outputs, db)
+		dbs[InfluxDB] = db
 	}
 
 	if cfg.GetGeneral().LogToBolt {
@@ -141,25 +155,67 @@ func setupOutputs(ctx context.Context, cfg *config.Config) []db.Interface {
 				log.Fatalf("bolt: db.RunWithConfig failed: %v", err)
 			}
 		}()
-		outputs = append(outputs, db)
+		dbs[BoltDB] = db
 	}
 
-	return outputs
+	return dbs
 }
 
-func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, outputs []db.Interface) {
+func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, dbs map[string]db.Interface) {
 	for {
 		pts := buffer.PullAll(time.Now())
 		sort.Slice(pts, func(i, j int) bool {
 			return strings.Compare(pts[i].Name(), pts[j].Name()) < 0
 		})
-		for _, out := range outputs {
-			out.Push(pts)
+		for _, db := range dbs {
+			db.Push(pts)
 		}
 		select {
 		case <-time.After(time.Duration(cfg.GetGeneral().MaxRefreshRateSec) * time.Second):
 		case <-ctx.Done():
 			return
 		}
+	}
+}
+
+func maybeHandleHTTP(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) {
+	if !cfg.GetGeneral().EnableHttp {
+		return
+	}
+
+	srv := http.Server{}
+
+	listen := cfg.GetHttp().Listen
+	if listen == "" {
+		if os.Geteuid() == 0 {
+			listen = ":80"
+		} else {
+			listen = ":8080"
+		}
+	}
+	srv.Addr = listen
+
+	srcDB := cfg.GetHttp().SourceDb
+	if _, ok := dbs[srcDB]; !ok {
+		fmt.Fprintf(os.Stderr, "HTTP: source_db (%q) not enabled\n", srcDB)
+		os.Exit(4)
+	}
+
+	src, ok := dbs[srcDB].(db.Source)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "HTTP: reading from source_db (%q) not supported\n", srcDB)
+		os.Exit(4)
+	}
+
+	plt := plot.NewPlotter(src)
+	http.Handle("/render", plt)
+
+	go func() {
+		<-ctx.Done()
+		srv.Shutdown(ctx)
+	}()
+
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("srv.ListenAndServe: %v", err)
 	}
 }
