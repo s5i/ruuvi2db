@@ -7,6 +7,7 @@ const ExampleConfig = `general {
 	log_to_stdout: true
 	log_to_influx: false
 	log_to_bolt: false
+	enable_http: false
 }
 
 bluetooth {
@@ -16,6 +17,11 @@ bluetooth {
 devices {
 	ruuvi_tag { mac: "89-75-AE-8B-52-D9" human_name: "Living Room" }
 	ruuvi_tag { mac: "47-36-DA-4A-9F-F6" human_name: "Bedroom" }
+}
+
+http {
+	listen: ":80"
+	source_db: "bolt"
 }
 
 influx_db {

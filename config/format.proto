@@ -6,6 +6,7 @@ message Config {
 	General general = 1;
 	Bluetooth bluetooth = 2;
 	Devices devices = 3;
+	HTTP http = 4;
 
 	InfluxDB influx_db = 100;
 	BoltDB bolt_db = 101;
@@ -15,10 +16,16 @@ message General {
 	bool enable_debug_logs = 1;
 	int64 max_refresh_rate_sec = 2;
 	int64 buffer_size = 3;
+	bool enable_http = 4;
 
 	bool log_to_stdout = 100;
 	bool log_to_influx = 101;
 	bool log_to_bolt = 102;
+}
+
+message HTTP {
+	string listen = 1;
+	string source_db = 2;
 }
 
 message Bluetooth {
