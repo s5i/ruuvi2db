@@ -93,6 +93,9 @@ func (bdb *boltDB) Run(ctx context.Context, path string, opts ...runOption) erro
 							log.Printf("badly encoded point %v", v)
 							return nil
 						}
+						if p.Timestamp.Before(getReq.startTime) || getReq.endTime.Before(p.Timestamp) {
+							return nil
+						}
 						points = append(points, p)
 						return nil
 					})
