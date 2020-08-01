@@ -13,22 +13,25 @@ import (
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
+	"gonum.org/v1/plot/vg/draw"
 )
 
 func NewPlotter(src db.Source) *Plotter {
 	return &Plotter{
-		format: "png",
-		xSize:  "20cm",
-		ySize:  "20cm",
-		source: src,
+		format:     "png",
+		xSize:      "20cm",
+		ySize:      "20cm",
+		legendSize: "5cm",
+		source:     src,
 	}
 }
 
 type Plotter struct {
-	format string
-	xSize  string
-	ySize  string
-	source db.Source
+	format     string
+	xSize      string
+	ySize      string
+	legendSize string
+	source     db.Source
 }
 
 func (z *Plotter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +116,7 @@ func (z *Plotter) write(w io.Writer, title, unit string, points map[string][]dat
 		lps = append(lps, toXYs(pts, property))
 	}
 
-	if err := plotutil.AddLinePoints(p, lps...); err != nil {
+	if err := plotutil.AddLines(p, lps...); err != nil {
 		return err
 	}
 
@@ -127,10 +130,21 @@ func (z *Plotter) write(w io.Writer, title, unit string, points map[string][]dat
 		return err
 	}
 
-	wt, err := p.WriterTo(x, y, z.format)
+	legX, err := vg.ParseLength(z.legendSize)
 	if err != nil {
 		return err
 	}
+
+	wt, err := draw.NewFormattedCanvas(x+legX, y, z.format)
+	if err != nil {
+		return err
+	}
+
+	p.Legend.Top = true
+	p.Legend.XOffs += legX
+	c := draw.Crop(draw.New(wt), 0, -legX, 0, 0)
+
+	p.Draw(c)
 
 	_, err = wt.WriteTo(w)
 	return err
