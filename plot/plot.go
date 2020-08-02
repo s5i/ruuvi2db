@@ -55,22 +55,29 @@ func (z *Plotter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Unitless end_time is treated as Unix timestamp (seconds).
+	// Unitful end_time is treated as offset from time.Now().
 	if x, ok := r.URL.Query()["end_time"]; ok && len(x) == 1 {
-		ts, err := strconv.ParseInt(x[0], 10, 64)
-		if err != nil {
+		if ts, err := strconv.ParseInt(x[0], 10, 64); err == nil {
+			endTime = time.Unix(ts, 0)
+		} else if dur, err := time.ParseDuration(x[0]); err == nil {
+			endTime = time.Now().Add(dur)
+		} else {
 			http.Error(w, fmt.Sprintf("bad end_time %q", x[0]), 400)
 			return
 		}
-		endTime = time.Unix(ts, 0)
-
 	}
+
+	// Unitless duration is treated as seconds.
 	if x, ok := r.URL.Query()["duration"]; ok && len(x) == 1 {
-		dur, err := strconv.Atoi(x[0])
-		if err != nil {
+		if durInt, err := strconv.Atoi(x[0]); err == nil {
+			duration = time.Duration(durInt) * time.Second
+		} else if dur, err := time.ParseDuration(x[0]); err == nil {
+			duration = dur
+		} else {
 			http.Error(w, fmt.Sprintf("bad duration %q", x[0]), 400)
 			return
 		}
-		duration = time.Duration(dur) * time.Second
 	}
 
 	startTime := endTime.Add(-duration)
