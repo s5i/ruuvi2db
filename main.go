@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"sort"
@@ -21,7 +20,7 @@ import (
 	"github.com/s5i/ruuvi2db/db/bolt"
 	"github.com/s5i/ruuvi2db/db/influx"
 	"github.com/s5i/ruuvi2db/db/iowriter"
-	"github.com/s5i/ruuvi2db/plot"
+	"github.com/s5i/ruuvi2db/http"
 	"github.com/s5i/ruuvi2db/protocol"
 )
 
@@ -183,39 +182,8 @@ func maybeHandleHTTP(ctx context.Context, cfg *config.Config, dbs map[string]db.
 		return
 	}
 
-	srv := http.Server{}
-
-	listen := cfg.GetHttp().Listen
-	if listen == "" {
-		if os.Geteuid() == 0 {
-			listen = ":80"
-		} else {
-			listen = ":8080"
-		}
-	}
-	srv.Addr = listen
-
-	srcDB := cfg.GetHttp().SourceDb
-	if _, ok := dbs[srcDB]; !ok {
-		fmt.Fprintf(os.Stderr, "HTTP: source_db (%q) not enabled\n", srcDB)
+	if err := http.Run(ctx, cfg, dbs); err != nil {
+		log.Printf("http.Run failed: %v", err)
 		os.Exit(4)
-	}
-
-	src, ok := dbs[srcDB].(db.Source)
-	if !ok {
-		fmt.Fprintf(os.Stderr, "HTTP: reading from source_db (%q) not supported\n", srcDB)
-		os.Exit(4)
-	}
-
-	plt := plot.NewPlotter(src)
-	http.Handle("/render", plt)
-
-	go func() {
-		<-ctx.Done()
-		srv.Shutdown(ctx)
-	}()
-
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatalf("srv.ListenAndServe: %v", err)
 	}
 }

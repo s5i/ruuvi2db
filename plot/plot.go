@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/s5i/ruuvi2db/data"
@@ -58,9 +59,11 @@ func (z *Plotter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Unitless end_time is treated as Unix timestamp (seconds).
 	// Unitful end_time is treated as offset from time.Now().
 	if x, ok := r.URL.Query()["end_time"]; ok && len(x) == 1 {
-		if ts, err := strconv.ParseInt(x[0], 10, 64); err == nil {
+		if x[0] == "" || strings.ToLower(x[0]) == "now" {
+			// Assume default.
+		} else if ts, err := strconv.ParseInt(x[0], 10, 64); err == nil {
 			endTime = time.Unix(ts, 0)
-		} else if dur, err := time.ParseDuration(x[0]); err == nil {
+		} else if dur, err := parseDuration(x[0]); err == nil {
 			endTime = time.Now().Add(dur)
 		} else {
 			http.Error(w, fmt.Sprintf("bad end_time %q", x[0]), 400)
@@ -70,9 +73,11 @@ func (z *Plotter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Unitless duration is treated as seconds.
 	if x, ok := r.URL.Query()["duration"]; ok && len(x) == 1 {
-		if durInt, err := strconv.Atoi(x[0]); err == nil {
+		if x[0] == "" {
+			// Assume default.
+		} else if durInt, err := strconv.Atoi(x[0]); err == nil {
 			duration = time.Duration(durInt) * time.Second
-		} else if dur, err := time.ParseDuration(x[0]); err == nil {
+		} else if dur, err := parseDuration(x[0]); err == nil {
 			duration = dur
 		} else {
 			http.Error(w, fmt.Sprintf("bad duration %q", x[0]), 400)
@@ -164,4 +169,12 @@ func toXYs(points []data.Point, property func(data.Point) float64) plotter.XYs {
 		pts[i].Y = property(p)
 	}
 	return pts
+}
+
+func parseDuration(x string) (time.Duration, error) {
+	if strings.Contains(x, "d") {
+		dur, err := time.ParseDuration(strings.ReplaceAll(x, "d", "h"))
+		return time.Duration(24) * dur, err
+	}
+	return time.ParseDuration(x)
 }
