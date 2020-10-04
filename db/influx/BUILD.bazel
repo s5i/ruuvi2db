@@ -12,7 +12,7 @@ go_library(
         "//config",
         "//data",
         "//db",
-        "@com_github_influxdata_influxdb1_client//:go_default_library",
-        "@com_github_influxdata_influxdb1_client//v2:go_default_library",
+        "@com_github_influxdata_influxdb1_client//:influxdb1-client",
+        "@com_github_influxdata_influxdb1_client//v2:influxdb1-client",
     ],
 )

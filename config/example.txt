@@ -1,6 +1,4 @@
-package config
-
-const ExampleConfig = `general {
+general {
 	enable_debug_logs: false
 	max_refresh_rate_sec: 300
 	buffer_size: 5
@@ -39,4 +37,4 @@ bolt_db {
 	path: "/tmp/ruuvi.boltdb"
 	bucket_size_sec: 86400
 	retention_sec: 604800
-}`
+}

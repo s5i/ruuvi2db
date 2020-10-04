@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/s5i/ruuvi2db/bluetooth",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_go_ble_ble//:go_default_library",
-        "@com_github_go_ble_ble//linux:go_default_library",
+        "@com_github_go_ble_ble//:ble",
+        "@com_github_go_ble_ble//linux",
     ],
 )
