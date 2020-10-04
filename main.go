@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	licenses           = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
 	configPathOverride = flag.String("config_path", "", "Path to config file.")
 	createConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
 )
@@ -37,6 +38,12 @@ var (
 
 func main() {
 	flag.Parse()
+
+	if *licenses {
+		fmt.Fprint(os.Stderr, Licenses)
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
