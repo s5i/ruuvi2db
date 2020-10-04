@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "protocol",
+    srcs = [
+        "format3.go",
+        "protocol.go",
+    ],
+    importpath = "github.com/s5i/ruuvi2db/protocol",
+    visibility = ["//visibility:public"],
+    deps = ["//data"],
+)

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "iowriter",
+    srcs = [
+        "iowriter.go",
+        "stdout.go",
+    ],
+    importpath = "github.com/s5i/ruuvi2db/db/iowriter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//data",
+        "//db",
+    ],
+)

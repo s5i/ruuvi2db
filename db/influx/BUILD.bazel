@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "influx",
+    srcs = [
+        "influx.go",
+        "opts.go",
+    ],
+    importpath = "github.com/s5i/ruuvi2db/db/influx",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//config",
+        "//data",
+        "//db",
+        "@com_github_influxdata_influxdb1_client//:go_default_library",
+        "@com_github_influxdata_influxdb1_client//v2:go_default_library",
+    ],
+)

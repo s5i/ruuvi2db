@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@bazel_gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix github.com/s5i/ruuvi2db
+gazelle(name = "gazelle")
+
+go_library(
+    name = "ruuvi2db_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/s5i/ruuvi2db",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//bluetooth",
+        "//config",
+        "//data",
+        "//db",
+        "//db/bolt",
+        "//db/influx",
+        "//db/iowriter",
+        "//http",
+        "//protocol",
+    ],
+)
+
+go_binary(
+    name = "ruuvi2db",
+    embed = [":ruuvi2db_lib"],
+    visibility = ["//visibility:public"],
+)

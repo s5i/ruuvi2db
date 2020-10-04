@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "bolt",
+    srcs = [
+        "bolt.go",
+        "opts.go",
+    ],
+    importpath = "github.com/s5i/ruuvi2db/db/bolt",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//config",
+        "//data",
+        "//db",
+        "@com_github_boltdb_bolt//:go_default_library",
+    ],
+)
