@@ -59,7 +59,7 @@ func (bdb *boltDB) Run(ctx context.Context, path string, opts ...runOption) erro
 		select {
 		case points := <-bdb.pushCh:
 			for _, p := range points {
-				db.Update(func(tx *bolt.Tx) error {
+				if err := db.Update(func(tx *bolt.Tx) error {
 					b, err := tx.CreateBucketIfNotExists(bucketFromTimestamp(p.Timestamp, bdb.bucketSize))
 					if err != nil {
 						return err
@@ -77,25 +77,35 @@ func (bdb *boltDB) Run(ctx context.Context, path string, opts ...runOption) erro
 					}
 
 					return b.Put(k, v)
-				})
+				}); err != nil {
+					log.Printf("db.Update failed: %v", err)
+				}
 			}
+
 		case getReq := <-bdb.getCh:
+
 			points := []data.Point{}
 			db.View(func(tx *bolt.Tx) error {
 				return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 					bStart := timestampFromBucket(name)
-					if bStart.Before(getReq.startTime.Add(-bdb.bucketSize)) || getReq.endTime.Before(bStart) {
+					bEnd := bStart.Add(bdb.bucketSize)
+					if bStart.After(getReq.endTime) || bEnd.Before(getReq.startTime) {
 						return nil
 					}
+
 					return b.ForEach(func(k, v []byte) error {
 						p, err := data.DecodePoint(v)
 						if err != nil {
 							log.Printf("badly encoded point %v", v)
 							return nil
 						}
-						if p.Timestamp.Before(getReq.startTime) || getReq.endTime.Before(p.Timestamp) {
+						if p.Timestamp.Before(getReq.startTime) {
 							return nil
 						}
+						if p.Timestamp.After(getReq.endTime) {
+							return nil
+						}
+
 						points = append(points, p)
 						return nil
 					})
