@@ -2,10 +2,10 @@ general {
 	enable_debug_logs: false
 	max_refresh_rate_sec: 300
 	buffer_size: 5
-	log_to_stdout: true
+	log_to_stdout: false
 	log_to_influx: false
-	log_to_bolt: false
-	enable_http: false
+	log_to_bolt: true
+	enable_http: true
 }
 
 bluetooth {
@@ -35,7 +35,7 @@ influx_db {
 }
 
 bolt_db {
-	path: "/tmp/ruuvi.boltdb"
+	path: "/usr/local/ruuvi2db/data.boltdb"
 	bucket_size_sec: 86400
 	retention_sec: 604800
 }
