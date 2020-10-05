@@ -39,7 +39,7 @@ sudo mkdir -p /usr/local/ruuvi2db
 sudo mv ./ruuvi2db /usr/local/ruuvi2db
 sudo chown root:root /usr/local/ruuvi2db/ruuvi2db
 
-cat > /tmp/ruuvi2db.service << EOF
+sudo tee /etc/systemd/system/ruuvi2db.service << EOF > /dev/null
 [Unit]
 Description=ruuvi2db Service
 After=network.target
@@ -52,9 +52,6 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOF
-
-sudo mv /tmp/ruuvi2db.service /etc/systemd/system/ruuvi2db.service
-sudo chown root:root /etc/systemd/system/ruuvi2db.service
 
 sudo /usr/local/ruuvi2db/ruuvi2db --create_config
 
