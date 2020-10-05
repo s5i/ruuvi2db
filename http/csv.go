@@ -34,6 +34,17 @@ func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	csvW := csv.NewWriter(w)
+	if err := csvW.Write([]string{
+		"name",
+		"timestamp",
+		"temperature",
+		"humidity",
+		"pressure",
+		"battery",
+	}); err != nil {
+		http.Error(w, "Something went wrong", 500)
+		return
+	}
 
 	for addr, pts := range z.source.Get(endTime.Add(-duration), endTime) {
 		for _, p := range pts {

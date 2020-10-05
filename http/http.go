@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/db"
@@ -33,6 +34,21 @@ func Run(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) e
 		return fmt.Errorf("reading from source_db (%q) not supported", srcDB)
 	}
 
+	for fName, content := range StaticData {
+		fName, content := fName, content
+		if fName == "index.html" {
+			fName = ""
+		}
+
+		http.HandleFunc("/"+fName, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "public, max-age=360, immutable")
+			w.Header().Set("Content-Type", contentType(fName))
+			if _, err := w.Write(content); err != nil {
+				http.Error(w, "Something went wrong", 500)
+			}
+		})
+	}
+
 	http.Handle("/csv", newCSVHandler(src))
 
 	go func() {
@@ -45,4 +61,20 @@ func Run(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) e
 	}
 
 	return nil
+}
+
+func contentType(fName string) string {
+	split := strings.Split(fName, ".")
+	ext := split[len(split)-1]
+
+	switch ext {
+	case "", "html":
+		return "text/html"
+	case "js":
+		return "application/javascript"
+	case "css":
+		return "text/css"
+	default:
+		return "text/plain"
+	}
 }

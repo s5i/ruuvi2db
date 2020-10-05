@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_embed_data", "go_library")
 
 go_library(
     name = "http",
@@ -9,10 +9,21 @@ go_library(
     ],
     importpath = "github.com/s5i/ruuvi2db/http",
     visibility = ["//visibility:public"],
+    embed = [
+        ":static",  # keep
+    ],
     deps = [
         "//config",
         "//data",
         "//db",
         "//util",
     ],
+)
+
+go_embed_data(
+    name = "static",
+    srcs = glob(["static/*"]),
+    package = "http",
+    flatten = True,
+    var = "StaticData",
 )
