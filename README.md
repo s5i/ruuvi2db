@@ -32,6 +32,9 @@ Supported databases:
 ## Installation
 
 ```sh
+wget https://github.com/s5i/ruuvi2db/releases/latest/download/ruuvi2db
+chmod +x ./ruuvi2db
+
 sudo mkdir -p /usr/local/ruuvi2db
 sudo mv ./ruuvi2db /usr/local/ruuvi2db
 sudo chown root:root /usr/local/ruuvi2db/ruuvi2db
