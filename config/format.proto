@@ -26,6 +26,7 @@ message General {
 message HTTP {
 	string listen = 1;
 	string source_db = 2;
+	int64 default_timestamp_limit = 3;
 }
 
 message Bluetooth {

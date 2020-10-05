@@ -110,7 +110,7 @@ function parseDuration(str) {
 
 function refresh() {
   var end_time = document.getElementById('end_time').value || "now";
-  var duration = document.getElementById('duration').value || "1h";
+  var duration = document.getElementById('duration').value || "1d";
   var t = Date.now();
   if (end_time != "now") {
     t = new Date(end_time);

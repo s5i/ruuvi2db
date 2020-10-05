@@ -49,7 +49,7 @@ func Run(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) e
 		})
 	}
 
-	http.Handle("/csv", newCSVHandler(src))
+	http.Handle("/csv", newCSVHandler(src, cfg))
 
 	go func() {
 		<-ctx.Done()

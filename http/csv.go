@@ -9,18 +9,21 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/db"
 )
 
-func newCSVHandler(src db.Source) *csvHandler {
+func newCSVHandler(src db.Source, cfg *config.Config) *csvHandler {
 	return &csvHandler{
-		source: src,
+		source:                src,
+		defaultTimestampLimit: int(cfg.GetHttp().DefaultTimestampLimit),
 	}
 }
 
 type csvHandler struct {
-	source db.Source
+	source                db.Source
+	defaultTimestampLimit int
 }
 
 func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -29,12 +32,12 @@ func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	duration, err := duration(r, time.Hour)
+	duration, err := duration(r, 24*time.Hour)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	limit, err := csvLimit(r, 500)
+	limit, err := csvLimit(r, z.defaultTimestampLimit)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
