@@ -118,4 +118,18 @@ function refresh() {
   getData(Math.floor(t / 1000), parseDuration(duration));
 }
 
+function bindEnter() {
+  document.getElementById("end_time").addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+      refresh();
+    }
+  });
+  document.getElementById("duration").addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+      refresh();
+    }
+  });
+}
+
+bindEnter();
 refresh();
