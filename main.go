@@ -123,9 +123,12 @@ func setupHumanNames(cfg *config.Config) {
 }
 
 func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) {
-	if err := bluetooth.Run(ctx, int(cfg.GetBluetooth().HciId), func(addr string, data []byte) {
-		res, err := protocol.ParseDatagram(data, addr)
+	if err := bluetooth.Run(ctx, int(cfg.GetBluetooth().HciId), func(addr string, datagram []byte) {
+		res, err := protocol.ParseDatagram(datagram, addr)
 		if err != nil {
+			return
+		}
+		if cfg.GetGeneral().DisableUnknownDeviceLogging && !data.HasHumanName(res.Address) {
 			return
 		}
 		buffer.Push(*res)

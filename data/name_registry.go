@@ -16,3 +16,9 @@ func HumanName(addr string) string {
 	}
 	return addr
 }
+
+// HasHumanName returns whether a human-friendly name for an address exists.
+func HasHumanName(addr string) bool {
+	_, ok := humanNames[strings.ToLower(addr)]
+	return ok
+}

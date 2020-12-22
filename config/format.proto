@@ -17,6 +17,7 @@ message General {
 	int64 max_refresh_rate_sec = 2;
 	int64 buffer_size = 3;
 	bool enable_http = 4;
+	bool disable_unknown_device_logging = 5;
 
 	bool log_to_stdout = 100;
 	bool log_to_influx = 101;
@@ -45,7 +46,7 @@ message InfluxDB {
 	string connection = 1;
 	string database = 2;
 	string table = 3;
-	string username = 4; 
+	string username = 4;
 	string password = 5;
 	string precision = 6;
 	string retention_policy = 7;

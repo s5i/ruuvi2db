@@ -6,6 +6,7 @@ general {
 	log_to_influx: false
 	log_to_bolt: true
 	enable_http: true
+	disable_unknown_device_logging: true
 }
 
 bluetooth {
