@@ -22,7 +22,7 @@ function refreshGraphs(data, end_time, duration) {
     if (!datapoints[row.timestamp]) {
       datapoints[row.timestamp] = {};
       for (d of dimensions) {
-        datapoints[row.timestamp][d] = {};  
+        datapoints[row.timestamp][d] = {};
       }
     }
     for (d of dimensions) {
