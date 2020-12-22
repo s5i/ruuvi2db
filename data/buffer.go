@@ -1,28 +1,33 @@
 package data
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
 
 type Buffer struct {
-	mu       sync.RWMutex
-	readings map[string][]Point
-	nextIdx  map[string]int
-	size     int
+	mu               sync.RWMutex
+	readings         map[string][]Point
+	nextIdx          map[string]int
+	size             int
+	extrapolationGap time.Duration
 }
 
 // NewBuffer creates a buffer for data point readings.
 // Size specifies how many points should be kept per device address, automatically adjusted to be at least 2.
-func NewBuffer(size int) *Buffer {
+// ExtrapolationGap specifies the maximum duration between timestamps to be considered for extrapolation. Defaults to 5m.
+func NewBuffer(size int, extrapolationGap time.Duration) *Buffer {
 	if size < 2 {
 		size = 2
 	}
+	if extrapolationGap == 0 {
+		extrapolationGap = 5 * time.Minute
+	}
 	return &Buffer{
-		readings: map[string][]Point{},
-		nextIdx:  map[string]int{},
-		size:     size,
+		readings:         map[string][]Point{},
+		nextIdx:          map[string]int{},
+		size:             size,
+		extrapolationGap: extrapolationGap,
 	}
 }
 
@@ -43,23 +48,6 @@ func (b *Buffer) Push(p Point) {
 	b.nextIdx[p.Address] %= b.size
 }
 
-// Pull returns a data point for a given device address.
-func (b *Buffer) Pull(addr string, timestamp time.Time) (Point, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	if b.readings[addr] == nil {
-		return Point{}, fmt.Errorf("no readings for device %s", addr)
-	}
-
-	p, err := LinearExtrapolate(b.readings[addr], timestamp)
-	if err != nil {
-		return Point{}, fmt.Errorf("failed to extrapolate readings for device %s: %v", addr, err)
-	}
-
-	return p, nil
-}
-
 // PullAll returns data points for all known devices.
 func (b *Buffer) PullAll(timestamp time.Time) []Point {
 	b.mu.RLock()
@@ -71,7 +59,7 @@ func (b *Buffer) PullAll(timestamp time.Time) []Point {
 			continue
 		}
 
-		p, err := LinearExtrapolate(b.readings[addr], timestamp)
+		p, err := LinearExtrapolate(b.readings[addr], timestamp, b.extrapolationGap)
 		if err != nil {
 			continue
 		}

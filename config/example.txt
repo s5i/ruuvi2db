@@ -2,6 +2,7 @@ general {
 	enable_debug_logs: false
 	max_refresh_rate_sec: 300
 	buffer_size: 5
+	buffer_extrapolation_gap_sec: 300
 	log_to_stdout: false
 	log_to_influx: false
 	log_to_bolt: true

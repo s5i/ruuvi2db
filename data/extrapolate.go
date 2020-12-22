@@ -9,8 +9,10 @@ import (
 // LinearExtrapolate returns a result of linear extrapolation (or interpolation) of points
 // using timestamps as the function domain.
 // Warning: no guarantees on returned Address if input Addresses aren't consistent.
-func LinearExtrapolate(p []Point, wantTimestamp time.Time) (Point, error) {
+func LinearExtrapolate(p []Point, wantTimestamp time.Time, maxExtrapolationGap time.Duration) (Point, error) {
 	pts := []Point{}
+	minTs := wantTimestamp.Add(-maxExtrapolationGap)
+	maxTs := wantTimestamp.Add(maxExtrapolationGap)
 
 	// Get rid of entries with duplicate timestamps, we can't use them.
 	seenTs := map[time.Time]bool{}
@@ -18,12 +20,15 @@ func LinearExtrapolate(p []Point, wantTimestamp time.Time) (Point, error) {
 		if seenTs[p.Timestamp] {
 			continue
 		}
+		if p.Timestamp.Before(minTs) || p.Timestamp.After(maxTs) {
+			continue
+		}
 		pts = append(pts, p)
 		seenTs[p.Timestamp] = true
 	}
 
 	if len(pts) < 2 {
-		return Point{}, errors.New("need at least 2 points with unique timestamps")
+		return Point{}, errors.New("need at least 2 points with unique timestamps within the extrapolation gap")
 	}
 
 	sort.Slice(pts, func(i, j int) bool {

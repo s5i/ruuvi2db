@@ -58,7 +58,10 @@ func main() {
 	setupDebugLogs(cfg)
 	setupHumanNames(cfg)
 
-	buffer := data.NewBuffer(int(cfg.GetGeneral().BufferSize))
+	buffer := data.NewBuffer(
+		int(cfg.GetGeneral().BufferSize),
+		time.Duration(cfg.GetGeneral().BufferExtrapolationGapSec)*time.Second,
+	)
 	wg.Add(1)
 	go func() {
 		runBluetooth(ctx, cfg, buffer)

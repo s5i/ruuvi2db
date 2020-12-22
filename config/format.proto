@@ -18,6 +18,7 @@ message General {
 	int64 buffer_size = 3;
 	bool enable_http = 4;
 	bool disable_unknown_device_logging = 5;
+	int64 buffer_extrapolation_gap_sec = 6;
 
 	bool log_to_stdout = 100;
 	bool log_to_influx = 101;
