@@ -55,6 +55,9 @@ func (bdb *boltDB) Run(ctx context.Context, path string, opts ...runOption) erro
 	}
 	defer db.Close()
 
+	tick := time.NewTicker(time.Minute)
+	defer tick.Stop()
+
 	for {
 		select {
 		case points := <-bdb.pushCh:
@@ -112,6 +115,19 @@ func (bdb *boltDB) Run(ctx context.Context, path string, opts ...runOption) erro
 				})
 			})
 			getReq.ret <- points
+
+		case <-tick.C:
+
+			if err := db.Update(func(tx *bolt.Tx) error {
+				return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+					if timestampFromBucket(name).Add(bdb.bucketSize + bdb.retention).Before(time.Now()) {
+						return tx.DeleteBucket(name)
+					}
+					return nil
+				})
+			}); err != nil {
+				log.Printf("db.Update failed: %v", err)
+			}
 
 		case <-ctx.Done():
 			return nil
