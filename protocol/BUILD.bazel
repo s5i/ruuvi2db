@@ -4,6 +4,7 @@ go_library(
     name = "protocol",
     srcs = [
         "format3.go",
+        "format5.go",
         "protocol.go",
     ],
     importpath = "github.com/s5i/ruuvi2db/protocol",

@@ -9,7 +9,8 @@ Tested on Raspberry Pi Zero W.
 
 Supported data formats:
 
-- [Data Format 3](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_03.md) (in production)
+- [Data Format 3](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_03.md)
+- [Data Format 5](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_05.md) (untested)
 
 Output data:
 
@@ -76,6 +77,5 @@ sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which ruuvi2db)"
 
 Support for the following data formats:
 
-- [Data Formats 2 and 4](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_04.md) (deprecated)
-- [Data Format 5](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_05.md) (beta)
-- [Data Format 8](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_08.md) (proposed)
+- [Data Formats 2 and 4](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_04.md)
+- [Data Format 8](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_08.md)
