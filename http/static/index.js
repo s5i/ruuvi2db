@@ -75,6 +75,11 @@ function refreshGraphs(data, end_time, duration) {
                 max: maxX,
                 min: minX
             }
+        },
+        grid: {
+            y: {
+                show: true
+            }
         }
     });
   }
