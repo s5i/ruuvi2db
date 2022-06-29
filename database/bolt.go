@@ -15,10 +15,9 @@ import (
 // NewDB returns an object that can be used to connect and push to Bolt DB.
 func NewDB() *boltDB {
 	return &boltDB{
-		pushCh:     make(chan []data.Point, 1),
-		getCh:      make(chan getReq),
-		bucketSize: 24 * time.Hour,
-		retention:  7 * 24 * time.Hour,
+		pushCh:    make(chan []data.Point, 1),
+		getCh:     make(chan getReq),
+		retention: 7 * 24 * time.Hour,
 	}
 }
 
@@ -40,7 +39,7 @@ func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 		case points := <-bdb.pushCh:
 			for _, p := range points {
 				if err := db.Update(func(tx *bolt.Tx) error {
-					b, err := tx.CreateBucketIfNotExists(bucketFromTimestamp(p.Timestamp, bdb.bucketSize))
+					b, err := tx.CreateBucketIfNotExists(bucketFromTimestamp(p.Timestamp, bucketSize))
 					if err != nil {
 						return err
 					}
@@ -177,3 +176,5 @@ func sortAndSplit(points []data.Point) map[string][]data.Point {
 
 	return ret
 }
+
+const bucketSize = 24 * time.Hour
