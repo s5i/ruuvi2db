@@ -11,7 +11,6 @@ type Buffer struct {
 	mu               sync.RWMutex
 	readings         map[string][]Point
 	nextIdx          map[string]int
-	size             int
 	extrapolationGap time.Duration
 }
 
@@ -21,7 +20,6 @@ func NewBuffer() *Buffer {
 	return &Buffer{
 		readings:         map[string][]Point{},
 		nextIdx:          map[string]int{},
-		size:             2,
 		extrapolationGap: 5 * time.Minute,
 	}
 }
@@ -32,7 +30,7 @@ func (b *Buffer) Push(p Point) {
 	defer b.mu.Unlock()
 
 	if b.readings[p.Address] == nil {
-		b.readings[p.Address] = make([]Point, b.size, b.size)
+		b.readings[p.Address] = make([]Point, bufferSize, bufferSize)
 		for i := range b.readings[p.Address] {
 			b.readings[p.Address][i] = p
 		}
@@ -40,7 +38,7 @@ func (b *Buffer) Push(p Point) {
 
 	b.readings[p.Address][b.nextIdx[p.Address]] = p
 	b.nextIdx[p.Address]++
-	b.nextIdx[p.Address] %= b.size
+	b.nextIdx[p.Address] %= bufferSize
 }
 
 // PullAll returns data points for all known devices.
@@ -83,3 +81,5 @@ func (b *Buffer) Print() {
 		fmt.Fprintf(os.Stdout, "- %s\n", p)
 	}
 }
+
+const bufferSize = 2
