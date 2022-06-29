@@ -1,5 +1,5 @@
 general:
-  log_rate: "5m"
+  log_rate: "1m"
   log_unknown_devices: false
 
 bluetooth:

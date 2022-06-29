@@ -20,7 +20,7 @@ func NewBuffer() *Buffer {
 	return &Buffer{
 		readings:         map[string][]Point{},
 		nextIdx:          map[string]int{},
-		extrapolationGap: 5 * time.Minute,
+		extrapolationGap: 10 * time.Minute,
 	}
 }
 
