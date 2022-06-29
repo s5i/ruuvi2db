@@ -17,7 +17,7 @@ import (
 func newCSVHandler(src db.Source, cfg *config.Config) *csvHandler {
 	return &csvHandler{
 		source:                src,
-		defaultTimestampLimit: int(cfg.GetHttp().DefaultTimestampLimit),
+		defaultTimestampLimit: int(cfg.HTTP.DefaultTimestampLimit),
 	}
 }
 

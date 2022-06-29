@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,10 +12,17 @@ import (
 	"github.com/s5i/ruuvi2db/db"
 )
 
-func Run(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) error {
+//go:embed static/*
+var StaticData embed.FS
+
+func Run(ctx context.Context, cfg *config.Config, src db.Source) error {
+	if !cfg.HTTP.Enable {
+		return nil
+	}
+
 	srv := http.Server{}
 
-	listen := cfg.GetHttp().Listen
+	listen := cfg.HTTP.Listen
 	if listen == "" {
 		if os.Geteuid() == 0 {
 			listen = ":80"
@@ -24,18 +32,17 @@ func Run(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) e
 	}
 	srv.Addr = listen
 
-	srcDB := cfg.GetHttp().SourceDb
-	if _, ok := dbs[srcDB]; !ok {
-		return fmt.Errorf("source_db (%q) not enabled", srcDB)
+	files, err := StaticData.ReadDir("static")
+	if err != nil {
+		return fmt.Errorf("failed to read embedded data: %v", err)
 	}
 
-	src, ok := dbs[srcDB].(db.Source)
-	if !ok {
-		return fmt.Errorf("reading from source_db (%q) not supported", srcDB)
-	}
-
-	for fName, content := range StaticData {
-		fName, content := fName, content
+	for _, f := range files {
+		fName := f.Name()
+		content, err := StaticData.ReadFile("static/" + fName)
+		if err != nil {
+			return fmt.Errorf("failed to read embedded data: %v", err)
+		}
 		if fName == "index.html" {
 			fName = ""
 		}

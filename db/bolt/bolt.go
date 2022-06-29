@@ -29,14 +29,7 @@ func NewDB() *boltDB {
 func (bdb *boltDB) RunWithConfig(ctx context.Context, cfg *config.Config) error {
 	opts := []runOption{}
 
-	if r := cfg.GetBoltDb().RetentionSec; r != 0 {
-		opts = append(opts, WithRetention(time.Duration(r)*time.Second))
-	}
-	if bs := cfg.GetBoltDb().BucketSizeSec; bs != 0 {
-		opts = append(opts, WithBucketSize(time.Duration(bs)*time.Second))
-	}
-
-	return bdb.Run(ctx, cfg.GetBoltDb().Path, opts...)
+	return bdb.Run(ctx, cfg.Database.Path, opts...)
 }
 
 // Run starts a connection to DB and handles Push calls.

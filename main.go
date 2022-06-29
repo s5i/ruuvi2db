@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -18,7 +20,6 @@ import (
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/db"
 	"github.com/s5i/ruuvi2db/db/bolt"
-	"github.com/s5i/ruuvi2db/db/influx"
 	"github.com/s5i/ruuvi2db/db/iowriter"
 	"github.com/s5i/ruuvi2db/http"
 	"github.com/s5i/ruuvi2db/protocol"
@@ -26,21 +27,29 @@ import (
 
 var (
 	licenses           = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
+	version            = flag.Bool("version", false, "When true, print version and exit.")
 	configPathOverride = flag.String("config_path", "", "Path to config file.")
 	createConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
 )
 
 var (
 	StdoutDB = "stdout"
-	InfluxDB = "influx"
 	BoltDB   = "bolt"
+
+	//go:embed LICENSES_THIRD_PARTY
+	Licenses string
 )
 
 func main() {
 	flag.Parse()
 
 	if *licenses {
-		fmt.Fprint(os.Stderr, Licenses)
+		fmt.Fprintln(os.Stderr, Licenses)
+		return
+	}
+
+	if *version {
+		fmt.Fprintln(os.Stderr, v())
 		return
 	}
 
@@ -58,10 +67,7 @@ func main() {
 	setupDebugLogs(cfg)
 	setupHumanNames(cfg)
 
-	buffer := data.NewBuffer(
-		int(cfg.GetGeneral().BufferSize),
-		time.Duration(cfg.GetGeneral().BufferExtrapolationGapSec)*time.Second,
-	)
+	buffer := data.NewBuffer()
 	wg.Add(1)
 	go func() {
 		runBluetooth(ctx, cfg, buffer)
@@ -77,13 +83,14 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		maybeHandleHTTP(ctx, cfg, dbs)
+		maybeHandleHTTP(ctx, cfg, dbs[BoltDB].(db.Source))
 		wg.Done()
 	}()
 
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt)
 	<-sigint
+	fmt.Fprintln(os.Stderr, "Caught SIGINT, quitting...")
 	cancel()
 }
 
@@ -109,29 +116,28 @@ func readConfigOrExit(path string) *config.Config {
 	}
 	fmt.Fprintf(os.Stderr, "Aborting: %v\n", err)
 	os.Exit(2)
-
 	return nil
 }
 
 func setupDebugLogs(cfg *config.Config) {
-	if !cfg.GetGeneral().EnableDebugLogs {
+	if !cfg.Debug.DumpBinaryLogs {
 		log.SetOutput(ioutil.Discard)
 	}
 }
 
 func setupHumanNames(cfg *config.Config) {
-	for _, t := range cfg.GetDevices().RuuviTag {
-		data.RegisterHumanName(t.GetMac(), t.GetHumanName())
+	for _, t := range cfg.Devices.RuuviTag {
+		data.RegisterHumanName(t.MAC, t.HumanName)
 	}
 }
 
 func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) {
-	if err := bluetooth.Run(ctx, int(cfg.GetBluetooth().HciId), func(addr string, datagram []byte) {
+	if err := bluetooth.Run(ctx, int(cfg.Bluetooth.HCIID), func(addr string, datagram []byte) {
 		res, err := protocol.ParseDatagram(datagram, addr)
 		if err != nil {
 			return
 		}
-		if cfg.GetGeneral().DisableUnknownDeviceLogging && !data.HasHumanName(res.Address) {
+		if !(data.HasHumanName(res.Address) || cfg.General.LogUnknownDevices) {
 			return
 		}
 		buffer.Push(*res)
@@ -146,29 +152,17 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 func setupDBs(ctx context.Context, cfg *config.Config) map[string]db.Interface {
 	dbs := map[string]db.Interface{}
 
-	if cfg.GetGeneral().LogToStdout {
+	if cfg.Debug.DumpReadings {
 		dbs[StdoutDB] = iowriter.NewStdout()
 	}
 
-	if cfg.GetGeneral().LogToInflux {
-		db := influx.NewDB()
-		go func() {
-			if err := db.RunWithConfig(ctx, cfg); err != nil {
-				log.Fatalf("influx: db.RunWithConfig failed: %v", err)
-			}
-		}()
-		dbs[InfluxDB] = db
-	}
-
-	if cfg.GetGeneral().LogToBolt {
-		db := bolt.NewDB()
-		go func() {
-			if err := db.RunWithConfig(ctx, cfg); err != nil {
-				log.Fatalf("bolt: db.RunWithConfig failed: %v", err)
-			}
-		}()
-		dbs[BoltDB] = db
-	}
+	db := bolt.NewDB()
+	go func() {
+		if err := db.RunWithConfig(ctx, cfg); err != nil {
+			log.Fatalf("bolt: db.RunWithConfig failed: %v", err)
+		}
+	}()
+	dbs[BoltDB] = db
 
 	return dbs
 }
@@ -183,20 +177,39 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 			db.Push(pts)
 		}
 		select {
-		case <-time.After(time.Duration(cfg.GetGeneral().MaxRefreshRateSec) * time.Second):
+		case <-time.After(cfg.General.LogRate):
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func maybeHandleHTTP(ctx context.Context, cfg *config.Config, dbs map[string]db.Interface) {
-	if !cfg.GetGeneral().EnableHttp {
-		return
-	}
-
-	if err := http.Run(ctx, cfg, dbs); err != nil {
+func maybeHandleHTTP(ctx context.Context, cfg *config.Config, db db.Source) {
+	if err := http.Run(ctx, cfg, db); err != nil {
 		log.Printf("http.Run failed: %v", err)
 		os.Exit(4)
 	}
+}
+
+func v() string {
+	rev := "??????"
+	t := "????-??-??T??:??:??Z"
+	mod := ""
+
+	bi, ok := debug.ReadBuildInfo()
+
+	if ok {
+		for _, s := range bi.Settings {
+			if s.Key == "vcs.revision" {
+				rev = fmt.Sprintf("%s??????", s.Value)[:6]
+			}
+			if s.Key == "vcs.time" {
+				t = s.Value
+			}
+			if s.Key == "vcs.modified" && s.Value == "true" {
+				mod = " (modified)"
+			}
+		}
+	}
+	return fmt.Sprintf("rev: %s (%s)%s", rev, t, mod)
 }

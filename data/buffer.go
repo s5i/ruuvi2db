@@ -14,20 +14,13 @@ type Buffer struct {
 }
 
 // NewBuffer creates a buffer for data point readings.
-// Size specifies how many points should be kept per device address, automatically adjusted to be at least 2.
-// ExtrapolationGap specifies the maximum duration between timestamps to be considered for extrapolation. Defaults to 5m.
-func NewBuffer(size int, extrapolationGap time.Duration) *Buffer {
-	if size < 2 {
-		size = 2
-	}
-	if extrapolationGap == 0 {
-		extrapolationGap = 5 * time.Minute
-	}
+func NewBuffer() *Buffer {
+
 	return &Buffer{
 		readings:         map[string][]Point{},
 		nextIdx:          map[string]int{},
-		size:             size,
-		extrapolationGap: extrapolationGap,
+		size:             2,
+		extrapolationGap: 5 * time.Minute,
 	}
 }
 

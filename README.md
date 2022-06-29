@@ -22,7 +22,6 @@ Output data:
 Supported databases:
 
 - BoltDB (custom format)
-- InfluxDB v1.x
 
 ## Requirements
 
@@ -57,7 +56,7 @@ EOF
 sudo /usr/local/ruuvi2db/ruuvi2db --create_config
 
 # Change as desired.
-sudo vim /usr/local/ruuvi2db/config.textproto
+sudo vim /usr/local/ruuvi2db/config.yaml
 
 sudo systemctl enable ruuvi2db
 sudo systemctl start ruuvi2db

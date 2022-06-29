@@ -1,21 +1,26 @@
 package config
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"gopkg.in/yaml.v2"
 )
+
+//go:embed example.yaml
+var ExampleConfig string
 
 func Path(flag string) string {
 	cfgPath := flag
 	if cfgPath == "" {
 		if os.Geteuid() == 0 {
-			cfgPath = "/usr/local/ruuvi2db/config.textproto"
+			cfgPath = "/usr/local/ruuvi2db/config.yaml"
 		} else {
-			cfgPath = fmt.Sprintf("%s/.ruuvi2db/config.textproto", os.Getenv("HOME"))
+			cfgPath = fmt.Sprintf("%s/.ruuvi2db/config.yaml", os.Getenv("HOME"))
 		}
 	}
 	return cfgPath
@@ -49,8 +54,41 @@ func Read(path string) (*Config, error) {
 	}
 
 	cfg := &Config{}
-	if err := proto.UnmarshalText(string(b), cfg); err != nil {
+	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, fmt.Errorf("failed to process %s: %v", path, err)
 	}
 	return cfg, nil
+}
+
+type Config struct {
+	General struct {
+		LogRate           time.Duration `yaml:"log_rate"`
+		LogUnknownDevices bool          `yaml:"log_unknown_devices"`
+	} `yaml:"general"`
+
+	Bluetooth struct {
+		HCIID int64 `yaml:"hci_id"`
+	} `yaml:"bluetooth"`
+
+	Devices struct {
+		RuuviTag []struct {
+			MAC       string `yaml:"mac"`
+			HumanName string `yaml:"human_name"`
+		} `yaml:"ruuvi_tag"`
+	} `yaml:"devices"`
+
+	HTTP struct {
+		Enable                bool   `yaml:"enable"`
+		Listen                string `yaml:"listen"`
+		DefaultTimestampLimit int64  `yaml:"default_timestamp_limit"`
+	} `yaml:"http"`
+
+	Database struct {
+		Path string `yaml:"path"`
+	} `yaml:"database"`
+
+	Debug struct {
+		DumpBinaryLogs bool `yaml:"dump_binary_logs"`
+		DumpReadings   bool `yaml:"dump_readings"`
+	} `yaml:"debug"`
 }
