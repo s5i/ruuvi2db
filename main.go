@@ -174,7 +174,7 @@ func runHTTP(ctx context.Context, cfg *config.Config, db http.DB) {
 }
 
 func version() string {
-	rev := "??????"
+	rev := "???????"
 	t := "????-??-??T??:??:??Z"
 	mod := ""
 
@@ -183,7 +183,7 @@ func version() string {
 	if ok {
 		for _, s := range bi.Settings {
 			if s.Key == "vcs.revision" {
-				rev = fmt.Sprintf("%s??????", s.Value)[:6]
+				rev = fmt.Sprintf("%s???????", s.Value)[:7]
 			}
 			if s.Key == "vcs.time" {
 				t = s.Value
