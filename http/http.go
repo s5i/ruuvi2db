@@ -7,15 +7,16 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/s5i/ruuvi2db/config"
-	"github.com/s5i/ruuvi2db/db"
+	"github.com/s5i/ruuvi2db/data"
 )
 
 //go:embed static/*
 var StaticData embed.FS
 
-func Run(ctx context.Context, cfg *config.Config, src db.Source) error {
+func Run(ctx context.Context, cfg *config.Config, src DB) error {
 	if !cfg.HTTP.Enable {
 		return nil
 	}
@@ -84,4 +85,8 @@ func contentType(fName string) string {
 	default:
 		return "text/plain"
 	}
+}
+
+type DB interface {
+	Get(startTime, endTime time.Time) map[string][]data.Point
 }

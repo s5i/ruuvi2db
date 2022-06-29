@@ -10,46 +10,34 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/s5i/ruuvi2db/bluetooth"
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
-	"github.com/s5i/ruuvi2db/db"
-	"github.com/s5i/ruuvi2db/db/bolt"
-	"github.com/s5i/ruuvi2db/db/iowriter"
+	"github.com/s5i/ruuvi2db/database"
 	"github.com/s5i/ruuvi2db/http"
 	"github.com/s5i/ruuvi2db/protocol"
 )
 
 var (
-	licenses           = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
-	version            = flag.Bool("version", false, "When true, print version and exit.")
-	configPathOverride = flag.String("config_path", "", "Path to config file.")
-	createConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
-)
-
-var (
-	StdoutDB = "stdout"
-	BoltDB   = "bolt"
-
-	//go:embed LICENSES_THIRD_PARTY
-	Licenses string
+	fLicenses           = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
+	fVersion            = flag.Bool("version", false, "When true, print version and exit.")
+	fConfigPathOverride = flag.String("config_path", "", "Path to config file.")
+	fCreateConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
 )
 
 func main() {
 	flag.Parse()
 
-	if *licenses {
+	if *fLicenses {
 		fmt.Fprintln(os.Stderr, Licenses)
 		return
 	}
 
-	if *version {
-		fmt.Fprintln(os.Stderr, v())
+	if *fVersion {
+		fmt.Fprintln(os.Stderr, version())
 		return
 	}
 
@@ -57,33 +45,40 @@ func main() {
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
 
-	cfgPath := config.Path(*configPathOverride)
-	if *createConfig {
-		createConfigAndExit(cfgPath)
+	cfgPath := config.Path(*fConfigPathOverride)
+	if *fCreateConfig {
+		createConfig(cfgPath)
 	}
 
-	cfg := readConfigOrExit(cfgPath)
+	cfg := readConfig(cfgPath)
 
 	setupDebugLogs(cfg)
 	setupHumanNames(cfg)
 
 	buffer := data.NewBuffer()
+	db := database.NewDB()
+
 	wg.Add(1)
 	go func() {
 		runBluetooth(ctx, cfg, buffer)
 		wg.Done()
 	}()
 
-	dbs := setupDBs(ctx, cfg)
 	wg.Add(1)
 	go func() {
-		refreshLoop(ctx, cfg, buffer, dbs)
+		runDB(ctx, cfg, db)
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		maybeHandleHTTP(ctx, cfg, dbs[BoltDB].(db.Source))
+		refreshLoop(ctx, cfg, buffer, db)
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		runHTTP(ctx, cfg, db)
 		wg.Done()
 	}()
 
@@ -94,16 +89,16 @@ func main() {
 	cancel()
 }
 
-func createConfigAndExit(path string) {
+func createConfig(path string) {
 	if err := config.CreateExample(path); err != nil {
 		fmt.Fprintf(os.Stderr, "Aborting: %v\n", err)
-		os.Exit(1)
+		os.Exit(exitCreateConfigFailed)
 	}
 	fmt.Fprintf(os.Stderr, "Wrote example config to %s\n", path)
-	os.Exit(0)
+	os.Exit(exitOK)
 }
 
-func readConfigOrExit(path string) *config.Config {
+func readConfig(path string) *config.Config {
 	cfg, err := config.Read(path)
 	if err == nil {
 		return cfg
@@ -112,10 +107,10 @@ func readConfigOrExit(path string) *config.Config {
 		fmt.Fprintf(os.Stderr, "Config file %s does not exist.\n", path)
 		fmt.Fprintln(os.Stderr, "To create it, run:")
 		fmt.Fprintf(os.Stderr, "%s --create_config [--config_path=...]\n", os.Args[0])
-		os.Exit(2)
+		os.Exit(exitReadConfigFailed)
 	}
 	fmt.Fprintf(os.Stderr, "Aborting: %v\n", err)
-	os.Exit(2)
+	os.Exit(exitReadConfigFailed)
 	return nil
 }
 
@@ -145,37 +140,24 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 		log.Printf("bluetooth.Run failed: %v", err)
 		fmt.Fprintln(os.Stderr, "Can't run bluetooth; please grant necessary capabilities:")
 		fmt.Fprintf(os.Stderr, `$ sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which %s)"`+"\n", os.Args[0])
-		os.Exit(3)
+		os.Exit(exitRunBluetoothFailed)
 	}
 }
 
-func setupDBs(ctx context.Context, cfg *config.Config) map[string]db.Interface {
-	dbs := map[string]db.Interface{}
-
-	if cfg.Debug.DumpReadings {
-		dbs[StdoutDB] = iowriter.NewStdout()
+func runDB(ctx context.Context, cfg *config.Config, db db) {
+	if err := db.Run(ctx, cfg); err != nil {
+		log.Printf("db.Run failed: %v", err)
+		os.Exit(exitRunDBFailed)
 	}
-
-	db := bolt.NewDB()
-	go func() {
-		if err := db.RunWithConfig(ctx, cfg); err != nil {
-			log.Fatalf("bolt: db.RunWithConfig failed: %v", err)
-		}
-	}()
-	dbs[BoltDB] = db
-
-	return dbs
 }
 
-func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, dbs map[string]db.Interface) {
+func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, db db) {
 	for {
-		pts := buffer.PullAll(time.Now())
-		sort.Slice(pts, func(i, j int) bool {
-			return strings.Compare(pts[i].Name(), pts[j].Name()) < 0
-		})
-		for _, db := range dbs {
-			db.Push(pts)
+		if cfg.Debug.DumpReadings {
+			buffer.Print()
 		}
+		db.Push(buffer.PullAll(time.Now()))
+
 		select {
 		case <-time.After(cfg.General.LogRate):
 		case <-ctx.Done():
@@ -184,14 +166,14 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 	}
 }
 
-func maybeHandleHTTP(ctx context.Context, cfg *config.Config, db db.Source) {
+func runHTTP(ctx context.Context, cfg *config.Config, db http.DB) {
 	if err := http.Run(ctx, cfg, db); err != nil {
 		log.Printf("http.Run failed: %v", err)
-		os.Exit(4)
+		os.Exit(exitRunHTTPFailed)
 	}
 }
 
-func v() string {
+func version() string {
 	rev := "??????"
 	t := "????-??-??T??:??:??Z"
 	mod := ""
@@ -213,3 +195,20 @@ func v() string {
 	}
 	return fmt.Sprintf("rev: %s (%s)%s", rev, t, mod)
 }
+
+type db interface {
+	Push(points []data.Point)
+	Run(ctx context.Context, cfg *config.Config) error
+}
+
+//go:embed LICENSES_THIRD_PARTY
+var Licenses string
+
+const (
+	exitOK = iota
+	exitCreateConfigFailed
+	exitReadConfigFailed
+	exitRunBluetoothFailed
+	exitRunHTTPFailed
+	exitRunDBFailed
+)

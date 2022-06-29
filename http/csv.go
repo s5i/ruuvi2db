@@ -11,10 +11,9 @@ import (
 
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
-	"github.com/s5i/ruuvi2db/db"
 )
 
-func newCSVHandler(src db.Source, cfg *config.Config) *csvHandler {
+func newCSVHandler(src DB, cfg *config.Config) *csvHandler {
 	return &csvHandler{
 		source:                src,
 		defaultTimestampLimit: int(cfg.HTTP.DefaultTimestampLimit),
@@ -22,7 +21,7 @@ func newCSVHandler(src db.Source, cfg *config.Config) *csvHandler {
 }
 
 type csvHandler struct {
-	source                db.Source
+	source                DB
 	defaultTimestampLimit int
 }
 

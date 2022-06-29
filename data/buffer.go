@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -60,4 +62,24 @@ func (b *Buffer) PullAll(timestamp time.Time) []Point {
 		ret = append(ret, p)
 	}
 	return ret
+}
+
+// Print dumps data points for all known devices to stdout.
+func (b *Buffer) Print() {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	fmt.Fprintln(os.Stdout, "[Buffer dump]:")
+	for addr := range b.readings {
+		if b.readings[addr] == nil {
+			continue
+		}
+
+		p, err := LinearExtrapolate(b.readings[addr], time.Now(), b.extrapolationGap)
+		if err != nil {
+			continue
+		}
+
+		fmt.Fprintf(os.Stdout, "- %s\n", p)
+	}
 }
