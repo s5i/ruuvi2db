@@ -26,6 +26,7 @@ var (
 	fVersion            = flag.Bool("version", false, "When true, print version and exit.")
 	fConfigPathOverride = flag.String("config_path", "", "Path to config file.")
 	fCreateConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
+	fRewriteDB          = flag.Bool("rewrite_db", false, "If true, rewrite database and exit.")
 )
 
 func main() {
@@ -57,6 +58,13 @@ func main() {
 
 	buffer := data.NewBuffer()
 	db := database.NewDB()
+
+	if *fRewriteDB {
+		if err := db.Rewrite(); err != nil {
+			os.Exit(exitDBRewriteFailed)
+		}
+		os.Exit(exitOK)
+	}
 
 	wg.Add(1)
 	go func() {
@@ -211,4 +219,5 @@ const (
 	exitRunBluetoothFailed
 	exitRunHTTPFailed
 	exitRunDBFailed
+	exitDBRewriteFailed
 )

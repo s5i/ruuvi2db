@@ -1,6 +1,7 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"log"
@@ -67,7 +68,7 @@ func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 			db.View(func(tx *bolt.Tx) error {
 				return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 					bStart := timestampFromBucket(name)
-					bEnd := bStart.Add(bdb.bucketSize)
+					bEnd := bStart.Add(bucketSize)
 					if bStart.After(getReq.endTime) || bEnd.Before(getReq.startTime) {
 						return nil
 					}
@@ -96,7 +97,7 @@ func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 
 			if err := db.Update(func(tx *bolt.Tx) error {
 				return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-					if timestampFromBucket(name).Add(bdb.bucketSize + bdb.retention).Before(time.Now()) {
+					if timestampFromBucket(name).Add(bucketSize + bdb.retention).Before(time.Now()) {
 						return tx.DeleteBucket(name)
 					}
 					return nil
@@ -111,6 +112,67 @@ func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	return nil
+}
+
+// Rewrite rewrites the database.
+// This can resolve issues such as points being incorrectly bucketed due to bucket size change.
+func (bdb *boltDB) Rewrite() error {
+	db, err := bolt.Open(bdb.dbPath, 0644, &bolt.Options{Timeout: time.Second})
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return db.Update(func(tx *bolt.Tx) error {
+		tmp := []byte("temp")
+		newB, err := tx.CreateBucketIfNotExists(tmp)
+		if err != nil {
+			return err
+		}
+		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			if bytes.Equal(name, tmp) {
+				return nil
+			}
+
+			if err := b.ForEach(func(_, v []byte) error {
+				seq, err := newB.NextSequence()
+				if err != nil {
+					return err
+				}
+
+				k := keyFromSeq(seq)
+				return newB.Put(k, v)
+			}); err != nil {
+				return err
+			}
+			return tx.DeleteBucket(name)
+		}); err != nil {
+			return err
+		}
+		if err := newB.ForEach(func(_, v []byte) error {
+			p, err := data.DecodePoint(v)
+			if err != nil {
+				log.Printf("badly encoded point %v", v)
+				return nil
+			}
+
+			b, err := tx.CreateBucketIfNotExists(bucketFromTimestamp(p.Timestamp, bucketSize))
+			if err != nil {
+				return err
+			}
+
+			seq, err := b.NextSequence()
+			if err != nil {
+				return err
+			}
+			k := keyFromSeq(seq)
+
+			return b.Put(k, v)
+		}); err != nil {
+			return err
+		}
+		return tx.DeleteBucket(tmp)
+	})
 }
 
 // Push attempts to send data to DB.
@@ -132,9 +194,8 @@ type boltDB struct {
 	pushCh chan []data.Point
 	getCh  chan getReq
 
-	dbPath     string
-	bucketSize time.Duration
-	retention  time.Duration
+	dbPath    string
+	retention time.Duration
 }
 
 type getReq struct {
