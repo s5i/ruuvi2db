@@ -181,7 +181,14 @@ func runHTTP(ctx context.Context, cfg *config.Config, db http.DB) {
 	}
 }
 
+// Can be populated using -ldflags.
+var Version string
+
 func version() string {
+	if Version != "" {
+		return Version
+	}
+
 	rev := "???????"
 	t := "????-??-??T??:??:??Z"
 	mod := ""

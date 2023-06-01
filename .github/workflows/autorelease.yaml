@@ -21,7 +21,7 @@ jobs:
         run: go get -u github.com/s5i/ruuvi2db
 
       - name: Build
-        run: GOOS=linux GOARCH=arm go build .
+        run: GOOS=linux GOARCH=arm go build -ldflags "-X 'main.Version=${{ github.ref }}'" .
 
       - name: Create Release
         id: create_release
