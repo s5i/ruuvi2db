@@ -19,6 +19,9 @@ function refreshGraphs(data, end_time, duration) {
   for (row of data) {
     names[row.name] = true;
 
+    var minTs = Infinity;
+    var maxTs = 0;
+
     if (!datapoints[row.timestamp]) {
       datapoints[row.timestamp] = {};
       for (d of dimensions) {
@@ -37,6 +40,9 @@ function refreshGraphs(data, end_time, duration) {
     }
 
     for (ts in datapoints) {
+      minTs = Math.min(minTs, ts);
+      maxTs = Math.max(maxTs, ts);
+
       var date = new Date(0);
       date.setUTCSeconds(ts);
 
@@ -51,11 +57,13 @@ function refreshGraphs(data, end_time, duration) {
       }
     }
 
+    minTs = Math.max(minTs, end_time - duration);
     var minX = new Date(0);
-    minX.setUTCSeconds(end_time - duration);
+    minX.setUTCSeconds(minTs);
 
+    maxTs = Math.min(maxTs, end_time)
     var maxX = new Date(0);
-    maxX.setUTCSeconds(end_time);
+    maxX.setUTCSeconds(maxTs);
 
     c3.generate({
         bindto: '#graph-' + d,
