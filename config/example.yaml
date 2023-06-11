@@ -1,6 +1,7 @@
 general:
   log_rate: "1m"
   log_unknown_devices: false
+  max_datapoint_staleness: "2m"
 
 bluetooth:
   hci_id: -1

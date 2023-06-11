@@ -56,7 +56,7 @@ func main() {
 	setupDebugLogs(cfg)
 	setupHumanNames(cfg)
 
-	buffer := data.NewBuffer()
+	buffer := data.NewBuffer(cfg.General.MaxDatapointStaleness)
 	db := database.NewDB()
 
 	if *fRewriteDB {
@@ -164,7 +164,7 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 		if cfg.Debug.DumpReadings {
 			buffer.Print()
 		}
-		db.Push(buffer.PullAll(time.Now()))
+		db.Push(buffer.PullAll())
 
 		select {
 		case <-time.After(cfg.General.LogRate):

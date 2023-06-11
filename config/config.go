@@ -62,8 +62,9 @@ func Read(path string) (*Config, error) {
 
 type Config struct {
 	General struct {
-		LogRate           time.Duration `yaml:"log_rate"`
-		LogUnknownDevices bool          `yaml:"log_unknown_devices"`
+		LogRate               time.Duration `yaml:"log_rate"`
+		LogUnknownDevices     bool          `yaml:"log_unknown_devices"`
+		MaxDatapointStaleness time.Duration `yaml:"max_datapoint_staleness"`
 	} `yaml:"general"`
 
 	Bluetooth struct {

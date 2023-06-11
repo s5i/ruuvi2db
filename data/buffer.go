@@ -8,19 +8,16 @@ import (
 )
 
 type Buffer struct {
-	mu               sync.RWMutex
-	readings         map[string][]Point
-	nextIdx          map[string]int
-	extrapolationGap time.Duration
+	mu           sync.Mutex
+	points       map[string]Point
+	maxStaleness time.Duration
 }
 
 // NewBuffer creates a buffer for data point readings.
-func NewBuffer() *Buffer {
-
+func NewBuffer(maxStaleness time.Duration) *Buffer {
 	return &Buffer{
-		readings:         map[string][]Point{},
-		nextIdx:          map[string]int{},
-		extrapolationGap: 10 * time.Minute,
+		points:       map[string]Point{},
+		maxStaleness: maxStaleness,
 	}
 }
 
@@ -29,57 +26,37 @@ func (b *Buffer) Push(p Point) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if b.readings[p.Address] == nil {
-		b.readings[p.Address] = make([]Point, bufferSize, bufferSize)
-		for i := range b.readings[p.Address] {
-			b.readings[p.Address][i] = p
-		}
-	}
-
-	b.readings[p.Address][b.nextIdx[p.Address]] = p
-	b.nextIdx[p.Address]++
-	b.nextIdx[p.Address] %= bufferSize
+	b.points[p.Address] = p
 }
 
 // PullAll returns data points for all known devices.
-func (b *Buffer) PullAll(timestamp time.Time) []Point {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+func (b *Buffer) PullAll() []Point {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	ret := []Point{}
-	for addr := range b.readings {
-		if b.readings[addr] == nil {
-			continue
-		}
-
-		p, err := LinearExtrapolate(b.readings[addr], timestamp, b.extrapolationGap)
-		if err != nil {
+	for _, p := range b.points {
+		if p.Timestamp.Add(b.maxStaleness).Before(time.Now()) {
 			continue
 		}
 
 		ret = append(ret, p)
 	}
+
 	return ret
 }
 
 // Print dumps data points for all known devices to stdout.
 func (b *Buffer) Print() {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	fmt.Fprintln(os.Stdout, "[Buffer dump]:")
-	for addr := range b.readings {
-		if b.readings[addr] == nil {
-			continue
+	for _, p := range b.points {
+		fmt.Fprintf(os.Stdout, "- %s", p)
+		if p.Timestamp.Add(b.maxStaleness).Before(time.Now()) {
+			fmt.Fprint(os.Stdout, " [stale]")
 		}
-
-		p, err := LinearExtrapolate(b.readings[addr], time.Now(), b.extrapolationGap)
-		if err != nil {
-			continue
-		}
-
-		fmt.Fprintf(os.Stdout, "- %s\n", p)
+		fmt.Fprint(os.Stdout, "\n")
 	}
 }
-
-const bufferSize = 2
