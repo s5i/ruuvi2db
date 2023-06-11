@@ -58,6 +58,9 @@ func Run(ctx context.Context, cfg *config.Config, src DB) error {
 	}
 
 	http.Handle("/csv", newCSVHandler(src, cfg))
+	if cfg.Debug.HTTPHandlers {
+		http.Handle("/threadz", threadzHandler())
+	}
 
 	go func() {
 		<-ctx.Done()

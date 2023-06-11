@@ -90,5 +90,6 @@ type Config struct {
 	Debug struct {
 		DumpBinaryLogs bool `yaml:"dump_binary_logs"`
 		DumpReadings   bool `yaml:"dump_readings"`
+		HTTPHandlers   bool `yaml:"http_handlers"`
 	} `yaml:"debug"`
 }
