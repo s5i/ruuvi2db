@@ -78,7 +78,9 @@ function refreshGraphs(data, end_time, duration) {
             x: {
                 type: 'timeseries',
                 tick: {
-                    format: '%Y-%m-%d %H:%M'
+                    format: '%H:%M',
+                    count: 25,
+                    culling: false
                 },
                 max: maxX,
                 min: minX
@@ -87,6 +89,11 @@ function refreshGraphs(data, end_time, duration) {
         grid: {
             y: {
                 show: true
+            }
+        },
+        tooltip: {
+            format: {
+                title: function (x, _) { return x.toLocaleString("sv-SE"); }
             }
         }
     });

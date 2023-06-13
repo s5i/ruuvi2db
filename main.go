@@ -164,7 +164,12 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 		if cfg.Debug.DumpReadings {
 			buffer.Print()
 		}
-		db.Push(buffer.PullAll())
+		ts := time.Now().Truncate(cfg.General.LogRate)
+		data := buffer.PullAll()
+		for i := range data {
+			data[i].Timestamp = ts
+		}
+		db.Push(data)
 
 		select {
 		case <-time.After(cfg.General.LogRate):
