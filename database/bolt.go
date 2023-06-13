@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"log"
 	"sort"
+	"syscall"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -26,7 +27,10 @@ func NewDB() *boltDB {
 func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 	bdb.dbPath = cfg.Database.Path
 
-	db, err := bolt.Open(bdb.dbPath, 0644, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(bdb.dbPath, 0644, &bolt.Options{
+		Timeout:   time.Second,
+		MmapFlags: syscall.MAP_POPULATE,
+	})
 	if err != nil {
 		return err
 	}

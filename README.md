@@ -25,7 +25,7 @@ Supported databases:
 
 ## Requirements
 
-* Linux
+* Linux 2.6.23+
 * Bluetooth adapter with BLE support
 * Raw capture capabilities for the binary
 
