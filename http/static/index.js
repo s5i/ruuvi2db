@@ -24,7 +24,14 @@ function refresh() {
           promises.push(fetch(`/data.json?kind=${kind}&end_time=${et}&duration=3600`).then(resp => { return resp.json() }));
         }
         Promise.all(promises).then((values) => {
-          let data = values.flat();
+          let preFilterData = values.flat();
+          let skip = Math.max(Math.floor(preFilterData.length / 250), 1);
+          let begin = preFilterData.length % skip;
+          let data = [];
+          for (let i = begin; i < preFilterData.length; i += skip) {
+            data.push(preFilterData[i]);
+          }
+
           for (i in data) {
             data[i]['ts'] = new Date(data[i]['ts']);
           }
