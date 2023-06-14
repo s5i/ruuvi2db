@@ -28,16 +28,16 @@ func Path(flag string) string {
 
 func CreateExample(path string) error {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		return fmt.Errorf("file %s already exists", path)
+		return fmt.Errorf("file %q already exists", path)
 	}
 
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create %s directory: %v", err)
+		return fmt.Errorf("failed to create %q directory: %v", dir, err)
 	}
 
 	if err := ioutil.WriteFile(path, []byte(ExampleConfig), 0644); err != nil {
-		return fmt.Errorf("failed to create %s file: %v", path, err)
+		return fmt.Errorf("failed to create %q file: %v", path, err)
 	}
 
 	return nil
@@ -50,12 +50,12 @@ func Read(path string) (*Config, error) {
 
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %v", path, err)
+		return nil, fmt.Errorf("failed to read %q: %v", path, err)
 	}
 
 	cfg := &Config{}
 	if err := yaml.Unmarshal(b, cfg); err != nil {
-		return nil, fmt.Errorf("failed to process %s: %v", path, err)
+		return nil, fmt.Errorf("failed to process %q: %v", path, err)
 	}
 	return cfg, nil
 }
