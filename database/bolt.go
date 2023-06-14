@@ -114,8 +114,6 @@ func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 			return nil
 		}
 	}
-
-	return nil
 }
 
 // Rewrite rewrites the database.
@@ -184,14 +182,16 @@ func (bdb *boltDB) Push(points []data.Point) {
 	bdb.pushCh <- points
 }
 
-func (bdb *boltDB) Get(startTime, endTime time.Time) map[string][]data.Point {
+// Get returns data points between specified start and end time.
+func (bdb *boltDB) Get(startTime, endTime time.Time) []data.Point {
 	req := getReq{
 		startTime: startTime,
 		endTime:   endTime,
 		ret:       make(chan []data.Point),
 	}
 	bdb.getCh <- req
-	return sortAndSplit(<-req.ret)
+	ret := <-req.ret
+	return ret
 }
 
 type boltDB struct {

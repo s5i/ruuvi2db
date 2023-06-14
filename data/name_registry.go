@@ -4,6 +4,15 @@ import "strings"
 
 var humanNames = map[string]string{}
 
+// ListHumanNames lists known human-friendly names.
+func ListHumanNames() []string {
+	ret := []string{}
+	for _, v := range humanNames {
+		ret = append(ret, v)
+	}
+	return ret
+}
+
 // RegisterHumanName associates an address with a given human-friendly name.
 func RegisterHumanName(addr string, humanName string) {
 	humanNames[strings.ToLower(addr)] = humanName

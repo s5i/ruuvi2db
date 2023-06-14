@@ -1,116 +1,73 @@
-function getData(end_time, duration) {
-  var end_time_trunc = end_time - (end_time % 3600);
+function refresh() {
+  let end_time_str = document.getElementById('end_time').value || "now";
+  let end_time = Date.now();
+  if (end_time_str != "now") {
+    end_time = new Date(end_time_str);
+  }
+  end_time = Math.floor(end_time / 1000);
+
+  let duration = parseDuration(document.getElementById('duration').value || "1d");
+
+  let end_time_trunc = end_time - (end_time % 3600);
   if (end_time_trunc != end_time) {
     end_time_trunc += 3600;
   }
-  var start_time_trunc = end_time - duration - ((end_time - duration) % 3600);
-  var promises = [];
-  for (let et = end_time_trunc; et > start_time_trunc; et -= 3600) {
-    promises.push(new Promise((resolve, reject) => {
-      Papa.parse(`/csv?end_time=${et}&duration=3600`, {
-        download: true,
-        delimiter: ",",
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          resolve(results.data);
-        },
+
+  let start_time_trunc = end_time - duration - ((end_time - duration) % 3600);
+
+  fetch('/tags.json').then(resp => { return resp.json() }).then(tags => {
+    let kinds = ["temperature", "humidity", "pressure", "battery"];
+    let updateKind = (kind) => {
+      return new Promise(async (resolve, _) => {
+        let promises = [];
+        for (let et = end_time_trunc; et > start_time_trunc; et -= 3600) {
+          promises.push(fetch(`/data.json?kind=${kind}&end_time=${et}&duration=3600`).then(resp => { return resp.json() }));
+        }
+        Promise.all(promises).then((values) => {
+          let data = values.flat();
+          for (i in data) {
+            data[i]['ts'] = new Date(data[i]['ts']);
+          }
+          graph(kind, data, tags)
+        });
+
       });
-    }))
-  }
-  Promise.all(promises).then((values) => {
-    refreshGraphs(values.flat(), end_time, duration)
+    };
+    kinds.map((kind) => updateKind(kind));
   });
 }
 
-function refreshGraphs(data, end_time, duration) {
-  var names = {};
-  var datapoints = {};
-  var columns = {};
-  var dimensions = ['temperature', 'humidity', 'pressure', 'battery'];
-
-  for (row of data) {
-    names[row.name] = true;
-
-    var minTs = Infinity;
-    var maxTs = 0;
-
-    if (!datapoints[row.timestamp]) {
-      datapoints[row.timestamp] = {};
-      for (d of dimensions) {
-        datapoints[row.timestamp][d] = {};
+function graph(kind, data, tags) {
+  c3.generate({
+    bindto: '#graph-' + kind,
+    data: {
+      json: data,
+      keys: { x: 'ts', value: tags },
+    },
+    line: {
+      connect_null: true
+    },
+    axis: {
+      x: {
+        type: 'timeseries',
+        tick: {
+          format: '%H:%M',
+          count: 25,
+          culling: false
+        },
+      }
+    },
+    grid: {
+      y: {
+        show: true
+      }
+    },
+    tooltip: {
+      format: {
+        title: function (x, _) { return x.toLocaleString("sv-SE"); }
       }
     }
-    for (d of dimensions) {
-      datapoints[row.timestamp][d][row.name] = row[d];
-    }
-  }
-
-  for (d of dimensions) {
-    columns[d] = [['ts']];
-    for (name in names) {
-      columns[d].push([name]);
-    }
-
-    for (ts in datapoints) {
-      minTs = Math.min(minTs, ts);
-      maxTs = Math.max(maxTs, ts);
-
-      var date = new Date(0);
-      date.setUTCSeconds(ts);
-
-      for (i in columns[d]) {
-        if (columns[d][i][0] == 'ts') {
-          columns[d][i].push(date);
-          continue;
-        }
-        columns[d][i].push(
-          datapoints[ts][d][columns[d][i][0]] || null
-        );
-      }
-    }
-
-    minTs = Math.max(minTs, end_time - duration);
-    var minX = new Date(0);
-    minX.setUTCSeconds(minTs);
-
-    maxTs = Math.min(maxTs, end_time)
-    var maxX = new Date(0);
-    maxX.setUTCSeconds(maxTs);
-
-    c3.generate({
-        bindto: '#graph-' + d,
-        data: {
-            x: 'ts',
-            columns: columns[d]
-        },
-        line: {
-          connect_null: true
-        },
-        axis: {
-            x: {
-                type: 'timeseries',
-                tick: {
-                    format: '%H:%M',
-                    count: 25,
-                    culling: false
-                },
-                max: maxX,
-                min: minX
-            }
-        },
-        grid: {
-            y: {
-                show: true
-            }
-        },
-        tooltip: {
-            format: {
-                title: function (x, _) { return x.toLocaleString("sv-SE"); }
-            }
-        }
-    });
-  }
+  });
 }
 
 function parseDuration(str) {
@@ -141,23 +98,15 @@ function parseDuration(str) {
   }
 }
 
-function refresh() {
-  var end_time = document.getElementById('end_time').value || "now";
-  var duration = document.getElementById('duration').value || "1d";
-  var t = Date.now();
-  if (end_time != "now") {
-    t = new Date(end_time);
-  }
-  getData(Math.floor(t / 1000), parseDuration(duration));
-}
+
 
 function bindEnter() {
-  document.getElementById("end_time").addEventListener("keyup", function(event) {
+  document.getElementById("end_time").addEventListener("keyup", function (event) {
     if (event.key === "Enter") {
       refresh();
     }
   });
-  document.getElementById("duration").addEventListener("keyup", function(event) {
+  document.getElementById("duration").addEventListener("keyup", function (event) {
     if (event.key === "Enter") {
       refresh();
     }
