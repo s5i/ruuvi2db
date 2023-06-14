@@ -16,7 +16,6 @@ devices:
 http:
   enable: true
   listen: ":80"
-  default_timestamp_limit: 250
 
 database:
   path: "/usr/local/ruuvi2db/data.boltdb"

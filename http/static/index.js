@@ -1,12 +1,25 @@
 function getData(end_time, duration) {
-  var data = Papa.parse(`/csv?end_time=${end_time}&duration=${duration}`, {
-    download: true,
-    delimiter: ",",
-    header: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      refreshGraphs(results.data, end_time, duration);
-    },
+  var end_time_trunc = end_time - (end_time % 3600);
+  if (end_time_trunc != end_time) {
+    end_time_trunc += 3600;
+  }
+  var start_time_trunc = end_time - duration - ((end_time - duration) % 3600);
+  var promises = [];
+  for (let et = end_time_trunc; et > start_time_trunc; et -= 3600) {
+    promises.push(new Promise((resolve, reject) => {
+      Papa.parse(`/csv?end_time=${et}&duration=3600`, {
+        download: true,
+        delimiter: ",",
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          resolve(results.data);
+        },
+      });
+    }))
+  }
+  Promise.all(promises).then((values) => {
+    refreshGraphs(values.flat(), end_time, duration)
   });
 }
 

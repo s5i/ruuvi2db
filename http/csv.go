@@ -2,27 +2,21 @@ package http
 
 import (
 	"encoding/csv"
-	"errors"
-	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"time"
 
-	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
 )
 
-func newCSVHandler(src DB, cfg *config.Config) *csvHandler {
+func newCSVHandler(src DB) *csvHandler {
 	return &csvHandler{
-		source:                src,
-		defaultTimestampLimit: int(cfg.HTTP.DefaultTimestampLimit),
+		source: src,
 	}
 }
 
 type csvHandler struct {
-	source                DB
-	defaultTimestampLimit int
+	source DB
 }
 
 func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,13 +30,12 @@ func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	limit, err := csvLimit(r, z.defaultTimestampLimit)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
 
 	w.Header().Set("Content-Type", "text/plain")
+	if endTime.Before(time.Now()) {
+		w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+	}
+
 	csvW := csv.NewWriter(w)
 	if err := csvW.Write([]string{
 		"name",
@@ -57,14 +50,10 @@ func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ptsMap := z.source.Get(endTime.Add(-duration), endTime)
-	ltd := csvLimitedTimestamps(ptsMap, limit)
 
 	for addr, pts := range ptsMap {
 		for _, p := range pts {
 			ts := p.Timestamp.Unix()
-			if ltd != nil && !ltd[ts] {
-				continue
-			}
 			if err := csvW.Write([]string{
 				data.HumanName(addr),
 				strconv.FormatInt(ts, 10),
@@ -79,55 +68,4 @@ func (z *csvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	csvW.Flush()
-}
-
-func csvLimitedTimestamps(ptsMap map[string][]data.Point, limit int) map[int64]bool {
-	if limit == 0 {
-		return nil
-	}
-
-	all := map[int64]bool{}
-	for _, pts := range ptsMap {
-		for _, p := range pts {
-			all[p.Timestamp.Unix()] = true
-		}
-	}
-
-	sorted := make([]int64, 0, len(all))
-	for ts := range all {
-		sorted = append(sorted, ts)
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i] > sorted[j]
-	})
-
-	out := map[int64]bool{}
-	i := 0.0
-	skip := float64(len(sorted)) / float64(limit)
-	for {
-		idx := int(i)
-		if idx >= len(sorted) {
-			break
-		}
-		out[sorted[idx]] = true
-		i += skip
-	}
-	return out
-}
-
-func csvLimit(r *http.Request, def int) (int, error) {
-	x, ok := r.URL.Query()["limit"]
-	if !ok {
-		return def, nil
-	}
-
-	if len(x) != 1 {
-		return 0, errors.New("limit specified multiple times")
-	}
-
-	if limit, err := strconv.ParseInt(x[0], 10, 64); err == nil {
-		return int(limit), nil
-	}
-
-	return 0, fmt.Errorf("malformed limit: %v", x)
 }
