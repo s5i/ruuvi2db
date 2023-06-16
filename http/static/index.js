@@ -15,8 +15,12 @@ function refresh() {
 
   let start_time_trunc = end_time - duration - ((end_time - duration) % 3600);
 
+  let kinds = ["temperature", "humidity", "pressure", "battery"];
+  kinds.map((kind) => {
+    document.getElementById('graph-' + kind).style.backgroundColor = "lightgray";
+  });
+  
   fetch('/tags.json').then(resp => { return resp.json() }).then(tags => {
-    let kinds = ["temperature", "humidity", "pressure", "battery"];
     let updateKind = (kind) => {
       return new Promise(async (resolve, _) => {
         let promises = [];
@@ -36,6 +40,7 @@ function refresh() {
             data[i]['ts'] = new Date(data[i]['ts']);
           }
           graph(kind, data, tags)
+          document.getElementById('graph-' + kind).style.backgroundColor = null;
         });
 
       });

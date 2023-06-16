@@ -4,20 +4,21 @@
 <body>
 <label for="duration">Duration:</label>
 <input id="duration" placeholder="1w3d6h10m30s" value="1d">
+<br>
 <label for="end_time">End time:</label>
 <input id="end_time" placeholder="now, 2000-01-01T08:32Z" value="now">
+<br>
 <button id="refresh" onclick="refresh()">Refresh</button>
 <h1>Temperature (°C)</h1>
-<div id="graph-temperature">(loading...)</div>
+<div id="graph-temperature" style="width:100%;min-height:300px;"></div>
 <h1>Humidity (%)</h1>
-<div id="graph-humidity">(loading...)</div>
+<div id="graph-humidity" style="width:100%;min-height:300px;"></div>
 <h1>Pressure (hPa)</h1>
-<div id="graph-pressure">(loading...)</div>
+<div id="graph-pressure" style="width:100%;min-height:300px;"></div>
 <h1>Battery (mV)</h1>
-<div id="graph-battery">(loading...)</div>
+<div id="graph-battery" style="width:100%;min-height:300px;"></div>
 <link href="c3.min.css" rel="stylesheet">
 <script src="d3.v5.min.js"></script>
 <script src="c3.min.js"></script>
-<script src="papaparse.min.js"></script>
 <script src="index.js"></script>
 </body>
