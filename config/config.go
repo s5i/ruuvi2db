@@ -79,9 +79,8 @@ type Config struct {
 	} `yaml:"devices"`
 
 	HTTP struct {
-		Enable                bool   `yaml:"enable"`
-		Listen                string `yaml:"listen"`
-		DefaultTimestampLimit int64  `yaml:"default_timestamp_limit"` // Deprecated.
+		Enable bool   `yaml:"enable"`
+		Listen string `yaml:"listen"`
 	} `yaml:"http"`
 
 	Database struct {
