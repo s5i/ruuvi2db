@@ -6,9 +6,10 @@
 <input id="duration" placeholder="1w3d6h10m30s" value="1d">
 <br>
 <label for="end_time">End time:</label>
-<input id="end_time" placeholder="now, 2000-01-01T08:32Z" value="now">
+<input id="end_time" placeholder="now, -1d, 2000-01-01T08:32Z" value="now">
 <br>
 <button id="refresh" onclick="refresh()">Refresh</button>
+<div id="error" style="color:red;"></div>
 <h1>Temperature (°C)</h1>
 <div id="graph-temperature" style="width:100%;min-height:300px;"></div>
 <h1>Humidity (%)</h1>

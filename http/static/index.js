@@ -1,25 +1,40 @@
 function refresh() {
+  document.getElementById('error').innerText = '';
   let end_time_str = document.getElementById('end_time').value || "now";
-  let end_time = Date.now();
-  if (end_time_str != "now") {
-    end_time = new Date(end_time_str);
+  let end_time = NaN;
+  if (end_time_str === "now") {
+    end_time = Math.floor(Date.now() / 1000);
   }
-  end_time = Math.floor(end_time / 1000);
+  if (isNaN(end_time)) {
+    end_time = Math.floor(Date.now() / 1000) + parseDuration(end_time_str);
+  }
+  if (isNaN(end_time)) {
+    end_time = Math.floor(new Date(end_time_str) / 1000);
+  }
+  if (isNaN(end_time)) {
+    document.getElementById('error').innerText = 'Bad end time.';
+    return;
+  }
 
   let duration = parseDuration(document.getElementById('duration').value || "1d");
+  if (duration === undefined) {
+    document.getElementById('error').innerText = 'Bad duration.';
+    return;
+  }
 
   let end_time_trunc = end_time - (end_time % 3600);
   if (end_time_trunc != end_time) {
     end_time_trunc += 3600;
   }
 
-  let start_time_trunc = end_time - duration - ((end_time - duration) % 3600);
+  let start_time = end_time - duration;
+  let start_time_trunc = start_time - ((start_time) % 3600);
 
   let kinds = ["temperature", "humidity", "pressure", "battery"];
   kinds.map((kind) => {
     document.getElementById('graph-' + kind).style.backgroundColor = "lightgray";
   });
-  
+
   fetch('/tags.json').then(resp => { return resp.json() }).then(tags => {
     let updateKind = (kind) => {
       return new Promise(async (resolve, _) => {
@@ -33,6 +48,11 @@ function refresh() {
           let begin = preFilterData.length % skip;
           let data = [];
           for (let i = begin; i < preFilterData.length; i += skip) {
+            preFilterData[i]['ts'] = new Date(preFilterData[i]['ts']);
+            let ts = Math.floor(preFilterData[i]['ts'] / 1000);
+            if (ts < start_time || ts > end_time) {
+              continue;
+            }
             data.push(preFilterData[i]);
           }
 
@@ -106,11 +126,9 @@ function parseDuration(str) {
       }
       sec += match[i].substring(0, match[i].length - 1) * durMap[match[i].substring(match[i].length - 1, match[i].length)];
     }
-    return sec;
+    return mul * sec;
   }
 }
-
-
 
 function bindEnter() {
   document.getElementById("end_time").addEventListener("keyup", function (event) {
