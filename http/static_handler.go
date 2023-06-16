@@ -2,7 +2,6 @@ package http
 
 import (
 	"embed"
-	"fmt"
 	"net/http"
 )
 
@@ -18,7 +17,6 @@ func staticHandler() http.HandlerFunc {
 
 		content, err := StaticData.ReadFile("static" + f)
 		if err != nil {
-			w.Write([]byte(fmt.Sprintf("%q, %+v", "static"+f, StaticData)))
 			http.Error(w, "Not found", 404)
 			return
 		}
