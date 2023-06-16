@@ -245,4 +245,4 @@ func sortAndSplit(points []data.Point) map[string][]data.Point {
 	return ret
 }
 
-const bucketSize = 24 * time.Hour
+const bucketSize = time.Hour
