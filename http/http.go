@@ -29,6 +29,10 @@ func Run(ctx context.Context, cfg *config.Config, db DB) error {
 	}
 	srv.Addr = listen
 
+	srv.ReadTimeout = time.Minute
+	srv.WriteTimeout = time.Minute
+	srv.SetKeepAlivesEnabled(false)
+
 	http.Handle("/", staticHandler())
 	http.Handle("/data.json", dataHandler(db))
 	http.Handle("/tags.json", tagsHandler())
