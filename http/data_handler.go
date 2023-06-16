@@ -3,8 +3,10 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/s5i/ruuvi2db/data"
@@ -12,12 +14,12 @@ import (
 
 func dataHandler(db DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		endTime, err := endTime(r, time.Now())
+		endTime, err := dataEndTime(r)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		duration, err := duration(r, 24*time.Hour)
+		duration, err := dataDuration(r)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -87,4 +89,40 @@ func dataKind(r *http.Request) (string, error) {
 	}
 
 	return x[0], nil
+}
+
+func dataEndTime(r *http.Request) (time.Time, error) {
+	x, ok := r.URL.Query()["end_time"]
+	if !ok {
+		return time.Time{}, errors.New("end_time not specified")
+	}
+
+	if len(x) != 1 {
+		return time.Time{}, errors.New("end_time specified multiple times")
+	}
+
+	ts, err := strconv.ParseInt(x[0], 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("malformed end_time %q", x[0])
+	}
+
+	return time.Unix(ts, 0), nil
+}
+
+func dataDuration(r *http.Request) (time.Duration, error) {
+	x, ok := r.URL.Query()["duration"]
+	if !ok {
+		return 0, errors.New("duration not specified")
+	}
+
+	if len(x) != 1 {
+		return 0, errors.New("duration specified multiple times")
+	}
+
+	ts, err := strconv.ParseInt(x[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("malformed duration %q", x[0])
+	}
+
+	return time.Duration(ts) * time.Second, nil
 }
