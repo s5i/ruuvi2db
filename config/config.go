@@ -85,7 +85,8 @@ type Config struct {
 	} `yaml:"http"`
 
 	Database struct {
-		Path string `yaml:"path"`
+		Path            string        `yaml:"path"`
+		RetentionWindow time.Duration `yaml:"retention_window"`
 	} `yaml:"database"`
 
 	Debug struct {

@@ -17,15 +17,18 @@ import (
 // NewDB returns an object that can be used to connect and push to Bolt DB.
 func NewDB() *boltDB {
 	return &boltDB{
-		pushCh:    make(chan []data.Point, 1),
-		getCh:     make(chan getReq),
-		retention: 7 * 24 * time.Hour,
+		pushCh: make(chan []data.Point, 1),
+		getCh:  make(chan getReq),
 	}
 }
 
 // Run starts a connection to DB and handles Push calls.
 func (bdb *boltDB) Run(ctx context.Context, cfg *config.Config) error {
 	bdb.dbPath = cfg.Database.Path
+	bdb.retention = cfg.Database.RetentionWindow
+	if bdb.retention == 0 {
+		bdb.retention = 7 * 24 * time.Hour
+	}
 
 	db, err := bolt.Open(bdb.dbPath, 0644, &bolt.Options{
 		Timeout:   time.Second,
