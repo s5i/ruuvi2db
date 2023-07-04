@@ -5,9 +5,9 @@ general:
 
 devices:
   ruuvi_tag:
-    - mac: "89-75-AE-8B-52-D9"
+    - mac: "89:75:AE:8B:52:D9"
       human_name: "Living Room"
-    - mac: "47-36-DA-4A-9F-F6"
+    - mac: "47:36:DA:4A:9F:F6"
       human_name: "Bedroom"
 
 http:
