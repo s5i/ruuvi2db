@@ -58,6 +58,10 @@ function refresh() {
 
           for (i in data) {
             data[i]['ts'] = new Date(data[i]['ts']);
+            for (j in data[i]) {
+              if (j == 'ts') continue;
+              data[i][j] /= 100;
+            }
           }
           graph(kind, data, tags)
           document.getElementById('graph-' + kind).style.backgroundColor = null;

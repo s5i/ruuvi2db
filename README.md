@@ -10,7 +10,7 @@ Tested on Raspberry Pi Zero W.
 Supported data formats:
 
 - [Data Format 3](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_03.md)
-- [Data Format 5](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_05.md) (untested)
+- [Data Format 5](https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_05.md)
 
 Output data:
 

@@ -67,13 +67,13 @@ func dataHandler(db DB) http.HandlerFunc {
 func dataValue(p data.Point, kind string) any {
 	switch kind {
 	case "temperature":
-		return p.Temperature
+		return int(p.Temperature * 100)
 	case "humidity":
-		return p.Humidity
+		return int(p.Humidity * 100)
 	case "pressure":
-		return p.Pressure
+		return int(p.Pressure * 100)
 	case "battery":
-		return p.Battery
+		return int(p.Battery * 100)
 	}
 	return nil
 }
