@@ -4,22 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-ble/ble"
-	"github.com/go-ble/ble/linux"
+	"tinygo.org/x/bluetooth"
 )
 
-func Run(ctx context.Context, hciID int, callback func(addr string, data []byte)) error {
-	opts := []ble.Option{}
-	if hciID >= 0 {
-		opts = append(opts, ble.OptDeviceID(hciID))
+func Run(ctx context.Context, callback func(addr string, mfID uint16, data []byte)) error {
+	adapter := bluetooth.DefaultAdapter
+	if err := adapter.Enable(); err != nil {
+		return fmt.Errorf("bluetooth.DefaultAdapter.Enable() failed: %v", err)
 	}
-	d, err := linux.NewDevice(opts...)
-	if err != nil {
-		return fmt.Errorf("linux.NewDevice failed: %v", err)
-	}
-	if err := d.Scan(ctx, false, func(a ble.Advertisement) {
-		callback(a.Addr().String(), a.ManufacturerData())
-	}); err != nil && err != context.Canceled {
+
+	go func() {
+		<-ctx.Done()
+		adapter.StopScan()
+	}()
+
+	if err := adapter.Scan(func(a *bluetooth.Adapter, d bluetooth.ScanResult) {
+		for k, v := range d.ManufacturerData() {
+			callback(d.Address.String(), k, v)
+		}
+	}); err != nil {
 		return err
 	}
 	return nil

@@ -9,7 +9,6 @@ import (
 )
 
 type format3 struct {
-	MfID       uint16
 	DataFormat uint8
 	Humid      uint8
 	Temp       uint8
@@ -21,19 +20,19 @@ type format3 struct {
 	Batt       uint16
 }
 
-func parseFormat3(raw []byte) (*data.Point, error) {
-	if gotLen, wantLen := len(raw), 16; gotLen < wantLen {
+func parseFormat3(mfID uint16, raw []byte) (*data.Point, error) {
+	if gotMFID, wantMFID := mfID, uint16(0x0499); gotMFID != wantMFID {
+		return nil, fmt.Errorf("mfID mismatch (got %X, want %X)", gotMFID, wantMFID)
+	}
+	if gotLen, wantLen := len(raw), 14; gotLen < wantLen {
 		return nil, fmt.Errorf("packet length mismatch (got %d, want at least %d)", gotLen, wantLen)
 	}
-	if gotMSD, wantMSD := binary.LittleEndian.Uint16(raw[0:2]), uint16(0x0499); gotMSD != wantMSD {
-		return nil, fmt.Errorf("MSD mismatch (got %X, want %X)", gotMSD, wantMSD)
-	}
-	if gotID, wantID := int(raw[2]), 3; gotID != wantID {
-		return nil, fmt.Errorf("Manufacturer ID mismatch (got %d, want %d)", gotID, wantID)
+	if gotID, wantID := int(raw[0]), 3; gotID != wantID {
+		return nil, fmt.Errorf("format mismatch (got %d, want %d)", gotID, wantID)
 	}
 
 	var packet format3
-	if err := binary.Read(bytes.NewReader(raw[0:16]), binary.BigEndian, &packet); err != nil {
+	if err := binary.Read(bytes.NewReader(raw[0:14]), binary.BigEndian, &packet); err != nil {
 		return nil, fmt.Errorf("binary.Read failed: %v", err)
 	}
 

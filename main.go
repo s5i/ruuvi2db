@@ -135,8 +135,8 @@ func setupHumanNames(cfg *config.Config) {
 }
 
 func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) {
-	if err := bluetooth.Run(ctx, int(cfg.Bluetooth.HCIID), func(addr string, datagram []byte) {
-		res, err := protocol.ParseDatagram(datagram, addr)
+	if err := bluetooth.Run(ctx, func(addr string, mfID uint16, datagram []byte) {
+		res, err := protocol.ParseDatagram(mfID, datagram, addr)
 		if err != nil {
 			return
 		}

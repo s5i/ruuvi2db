@@ -10,22 +10,22 @@ import (
 )
 
 // ParseDatagram converts raw BLE datagram to data.Point.
-func ParseDatagram(data []byte, addr string) (dp *data.Point, e error) {
+func ParseDatagram(mfID uint16, data []byte, addr string) (dp *data.Point, e error) {
 	errs := []string{}
 	defer func() {
 		if dp != nil {
-			dp.Address = addr
+			dp.Address = strings.ToLower(addr)
 			dp.Timestamp = time.Now()
 		}
 	}()
 
-	fmt3, err := parseFormat3(data)
+	fmt3, err := parseFormat3(mfID, data)
 	if err == nil {
 		return fmt3, nil
 	}
 	errs = append(errs, fmt.Sprintf("parseFormat3 failed: %v", err))
 
-	fmt5, err := parseFormat5(data)
+	fmt5, err := parseFormat5(mfID, data)
 	if err == nil {
 		return fmt5, nil
 	}

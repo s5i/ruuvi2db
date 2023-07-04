@@ -3,9 +3,6 @@ general:
   log_unknown_devices: false
   max_datapoint_staleness: "2m"
 
-bluetooth:
-  hci_id: -1
-
 devices:
   ruuvi_tag:
     - mac: "89-75-AE-8B-52-D9"

@@ -67,10 +67,6 @@ type Config struct {
 		MaxDatapointStaleness time.Duration `yaml:"max_datapoint_staleness"`
 	} `yaml:"general"`
 
-	Bluetooth struct {
-		HCIID int64 `yaml:"hci_id"`
-	} `yaml:"bluetooth"`
-
 	Devices struct {
 		RuuviTag []struct {
 			MAC       string `yaml:"mac"`
@@ -93,4 +89,8 @@ type Config struct {
 		DumpReadings   bool `yaml:"dump_readings"`
 		HTTPHandlers   bool `yaml:"http_handlers"`
 	} `yaml:"debug"`
+
+	Bluetooth struct {
+		HCIID int64 `yaml:"hci_id"` // Deprecated.
+	} `yaml:"bluetooth"`
 }
