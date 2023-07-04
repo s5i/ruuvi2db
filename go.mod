@@ -18,6 +18,7 @@ require (
 )
 
 require (
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
+	golang.org/x/sys v0.1.0 // indirect
 	tinygo.org/x/bluetooth v0.7.0
 )

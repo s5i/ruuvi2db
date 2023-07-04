@@ -5,11 +5,14 @@ import (
 	"net/http"
 
 	"github.com/s5i/ruuvi2db/data"
+	"golang.org/x/exp/slices"
 )
 
 func tagsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		b, err := json.Marshal(data.ListHumanNames())
+		tags := data.ListHumanNames()
+		slices.Sort(tags)
+		b, err := json.Marshal(tags)
 		if err != nil {
 			http.Error(w, "Something went wrong", 500)
 			return
