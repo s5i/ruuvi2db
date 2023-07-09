@@ -28,7 +28,6 @@ Supported databases:
 * Linux 2.6.23+
 * Bluetooth adapter with BLE support
 * Raw capture capabilities for the binary
-* [BlueZ](http://www.bluez.org/download/)
 
 ## Installation
 

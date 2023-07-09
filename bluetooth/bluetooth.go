@@ -2,27 +2,25 @@ package bluetooth
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
-	"tinygo.org/x/bluetooth"
+	"github.com/go-ble/ble"
+	"github.com/go-ble/ble/linux"
 )
 
 func Run(ctx context.Context, callback func(addr string, mfID uint16, data []byte)) error {
-	adapter := bluetooth.DefaultAdapter
-	if err := adapter.Enable(); err != nil {
-		return fmt.Errorf("bluetooth.DefaultAdapter.Enable() failed: %v", err)
+	d, err := linux.NewDevice()
+	if err != nil {
+		return fmt.Errorf("linux.NewDevice failed: %v", err)
 	}
 
-	go func() {
-		<-ctx.Done()
-		adapter.StopScan()
-	}()
-
-	if err := adapter.Scan(func(a *bluetooth.Adapter, d bluetooth.ScanResult) {
-		for k, v := range d.ManufacturerData() {
-			callback(d.Address.String(), k, v)
+	if err := d.Scan(ctx, false, func(a ble.Advertisement) {
+		if len(a.ManufacturerData()) < 2 {
+			return
 		}
-	}); err != nil {
+		callback(a.Addr().String(), binary.LittleEndian.Uint16(a.ManufacturerData()[0:2]), a.ManufacturerData()[2:])
+	}); err != nil && err != context.Canceled {
 		return err
 	}
 	return nil
