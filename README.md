@@ -42,10 +42,12 @@ sudo chown root:root /usr/local/ruuvi2db/ruuvi2db
 sudo tee /etc/systemd/system/ruuvi2db.service << EOF > /dev/null
 [Unit]
 Description=ruuvi2db Service
-After=network.target
+Requires=network.target
+Requires=bluetooth.target
 
 [Service]
 Type=simple
+ExecStartPre=sleep 10
 ExecStart=/usr/local/ruuvi2db/ruuvi2db
 Restart=always
 
