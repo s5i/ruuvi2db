@@ -4,22 +4,21 @@ go 1.18
 
 require (
 	github.com/boltdb/bolt v1.3.1
+	github.com/go-ble/ble v0.0.0-20230130210458-dd4b07d15402
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mgutz/logxi v0.0.0-20161027140823-aebf8a7d67ab // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/stretchr/testify v1.7.5 // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
 require (
-	github.com/go-ble/ble v0.0.0-20230130210458-dd4b07d15402
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
-	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
+	golang.org/x/sys v0.11.0 // indirect
 )

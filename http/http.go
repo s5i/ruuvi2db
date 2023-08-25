@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"strings"
 	"time"
@@ -33,13 +34,21 @@ func Run(ctx context.Context, cfg *config.Config, db DB) error {
 	srv.WriteTimeout = time.Minute
 	srv.SetKeepAlivesEnabled(false)
 
-	http.Handle("/", staticHandler())
-	http.Handle("/data.json", dataHandler(db))
-	http.Handle("/tags.json", tagsHandler())
+	mux := http.NewServeMux()
+
+	mux.Handle("/", staticHandler())
+	mux.Handle("/data.json", dataHandler(db))
+	mux.Handle("/tags.json", tagsHandler())
 
 	if cfg.Debug.HTTPHandlers {
-		http.Handle("/threadz", threadzHandler())
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
+
+	srv.Handler = mux
 
 	go func() {
 		<-ctx.Done()
