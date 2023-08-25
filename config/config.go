@@ -91,6 +91,7 @@ type Config struct {
 	} `yaml:"debug"`
 
 	Bluetooth struct {
-		HCIID int64 `yaml:"hci_id"` // Deprecated.
+		HCIID           int64         `yaml:"hci_id"` // Deprecated.
+		WatchdogTimeout time.Duration `yaml:"watchdog_timeout"`
 	} `yaml:"bluetooth"`
 }

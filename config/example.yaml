@@ -17,3 +17,6 @@ http:
 database:
   path: "/usr/local/ruuvi2db/data.boltdb"
   retention_window: "8760h"
+
+bluetooth:
+  watchdog_timeout: 5m

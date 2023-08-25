@@ -144,7 +144,7 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 			return
 		}
 		buffer.Push(*res)
-	}); err != nil {
+	}, cfg.Bluetooth.WatchdogTimeout); err != nil {
 		log.Printf("bluetooth.Run failed: %v", err)
 		fmt.Fprintln(os.Stderr, "Can't run bluetooth; please grant necessary capabilities:")
 		fmt.Fprintf(os.Stderr, `$ sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which %s)"`+"\n", os.Args[0])
