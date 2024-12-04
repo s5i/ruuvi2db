@@ -11,13 +11,13 @@ import (
 
 // Point represents a single data point from a RuuviTag.
 type Point struct {
-	Address   string
-	Timestamp time.Time
+	Address   string    `json:",omitempty"`
+	Timestamp time.Time `json:",omitempty"`
 
-	Temperature float64
-	Humidity    float64
-	Pressure    float64
-	Battery     float64
+	Temperature float64 `json:",omitempty"`
+	Humidity    float64 `json:",omitempty"`
+	Pressure    float64 `json:",omitempty"`
+	Battery     float64 `json:",omitempty"`
 }
 
 // Name returns Point's human name (if available) or its address.

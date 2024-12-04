@@ -15,13 +15,16 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.18.3'
+          go-version: '1.22.3'
 
       - name: Fetch dependencies
         run: go get -u github.com/s5i/ruuvi2db
 
-      - name: Build
-        run: GOOS=linux GOARCH=arm go build -ldflags "-X 'main.Version=${{ github.ref }}'" .
+      - name: Build ruuvi2db
+        run: GOOS=linux GOARCH=arm go build -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
+
+      - name: Build reader
+        run: GOOS=linux GOARCH=arm go build -C reader -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
 
       - name: Create Release
         id: create_release
@@ -34,8 +37,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload ruuvi2db
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,4 +45,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./ruuvi2db
           asset_name: ruuvi2db
+          asset_content_type: application/octet-stream
+
+      - name: Upload reader
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./reader/reader
+          asset_name: reader
           asset_content_type: application/octet-stream

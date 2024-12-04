@@ -20,6 +20,7 @@ type format3 struct {
 	Batt       uint16
 }
 
+// https://github.com/ruuvi/docs/blob/master/communication/bluetooth-advertisements/data-format-3-rawv1.md
 func parseFormat3(mfID uint16, raw []byte) (*data.Point, error) {
 	if gotMFID, wantMFID := mfID, uint16(0x0499); gotMFID != wantMFID {
 		return nil, fmt.Errorf("mfID mismatch (got %X, want %X)", gotMFID, wantMFID)

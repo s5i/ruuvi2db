@@ -22,6 +22,7 @@ type format5 struct {
 	MAC        [6]uint8
 }
 
+// https://github.com/ruuvi/docs/blob/master/communication/bluetooth-advertisements/data-format-5-rawv2.md
 func parseFormat5(mfID uint16, raw []byte) (*data.Point, error) {
 	if gotMFID, wantMFID := mfID, uint16(0x0499); gotMFID != wantMFID {
 		return nil, fmt.Errorf("mfID mismatch (got %X, want %X)", gotMFID, wantMFID)

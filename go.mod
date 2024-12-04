@@ -1,10 +1,13 @@
 module github.com/s5i/ruuvi2db
 
-go 1.18
+go 1.22.3
 
 require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/go-ble/ble v0.0.0-20230130210458-dd4b07d15402
+	github.com/s5i/goutil v0.0.0-20241204205921-85dcdeba604a
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
+	golang.org/x/sync v0.9.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -18,7 +21,4 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
-require (
-	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
-	golang.org/x/sys v0.11.0 // indirect
-)
+require golang.org/x/sys v0.11.0 // indirect

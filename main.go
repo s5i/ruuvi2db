@@ -2,23 +2,23 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
-	"os/signal"
-	"runtime/debug"
 	"sync"
 	"time"
 
-	"github.com/s5i/ruuvi2db/bluetooth"
+	"github.com/s5i/goutil/shutdown"
+	"github.com/s5i/goutil/version"
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
 	"github.com/s5i/ruuvi2db/database"
 	"github.com/s5i/ruuvi2db/http"
-	"github.com/s5i/ruuvi2db/protocol"
+	"github.com/s5i/ruuvi2db/licenses"
+	"github.com/s5i/ruuvi2db/reader/bluetooth"
+	"github.com/s5i/ruuvi2db/reader/protocol"
 )
 
 var (
@@ -33,16 +33,18 @@ func main() {
 	flag.Parse()
 
 	if *fLicenses {
-		fmt.Fprintln(os.Stderr, Licenses)
-		return
+		fmt.Fprintln(os.Stderr, licenses.Merged())
+		os.Exit(0)
 	}
 
 	if *fVersion {
-		fmt.Fprintln(os.Stderr, version())
+		fmt.Fprintln(os.Stderr, version.Get())
 		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	go shutdown.OnSignal(os.Interrupt, cancel)
+
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
 
@@ -89,12 +91,6 @@ func main() {
 		runHTTP(ctx, cfg, db)
 		wg.Done()
 	}()
-
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
-	<-sigint
-	fmt.Fprintln(os.Stderr, "Caught SIGINT, quitting...")
-	cancel()
 }
 
 func createConfig(path string) {
@@ -124,7 +120,7 @@ func readConfig(path string) *config.Config {
 
 func setupDebugLogs(cfg *config.Config) {
 	if !cfg.Debug.DumpBinaryLogs {
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 	}
 }
 
@@ -186,43 +182,10 @@ func runHTTP(ctx context.Context, cfg *config.Config, db http.DB) {
 	}
 }
 
-// Can be populated using -ldflags.
-var Version string
-
-func version() string {
-	if Version != "" {
-		return Version
-	}
-
-	rev := "???????"
-	t := "????-??-??T??:??:??Z"
-	mod := ""
-
-	bi, ok := debug.ReadBuildInfo()
-
-	if ok {
-		for _, s := range bi.Settings {
-			if s.Key == "vcs.revision" {
-				rev = fmt.Sprintf("%s???????", s.Value)[:7]
-			}
-			if s.Key == "vcs.time" {
-				t = s.Value
-			}
-			if s.Key == "vcs.modified" && s.Value == "true" {
-				mod = " (modified)"
-			}
-		}
-	}
-	return fmt.Sprintf("rev: %s (%s)%s", rev, t, mod)
-}
-
 type db interface {
 	Push(points []data.Point)
 	Run(ctx context.Context, cfg *config.Config) error
 }
-
-//go:embed LICENSES_THIRD_PARTY
-var Licenses string
 
 const (
 	exitOK = iota

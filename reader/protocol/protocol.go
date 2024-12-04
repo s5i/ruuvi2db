@@ -14,7 +14,7 @@ func ParseDatagram(mfID uint16, data []byte, addr string) (dp *data.Point, e err
 	errs := []string{}
 	defer func() {
 		if dp != nil {
-			dp.Address = strings.ToLower(addr)
+			dp.Address = strings.ToUpper(addr)
 			dp.Timestamp = time.Now()
 		}
 	}()

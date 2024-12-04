@@ -11,10 +11,16 @@ import (
 	"github.com/go-ble/ble/linux"
 )
 
+var (
+	ErrInit     = fmt.Errorf("bluetooth init error")
+	ErrScan     = fmt.Errorf("bluetooth scan error")
+	ErrWatchdog = fmt.Errorf("bluetooth watchdog error")
+)
+
 func Run(ctx context.Context, callback func(addr string, mfID uint16, data []byte), watchdogTimeout time.Duration) error {
 	d, err := linux.NewDevice()
 	if err != nil {
-		return fmt.Errorf("linux.NewDevice failed: %v", err)
+		return fmt.Errorf("%w: %v", ErrInit, err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -33,6 +39,8 @@ func Run(ctx context.Context, callback func(addr string, mfID uint16, data []byt
 			defer wg.Done()
 			for {
 				select {
+				case <-ctx.Done():
+					return
 				case <-watchdogCh:
 					if !t.Stop() {
 						<-t.C
@@ -57,11 +65,11 @@ func Run(ctx context.Context, callback func(addr string, mfID uint16, data []byt
 		}
 		callback(a.Addr().String(), binary.LittleEndian.Uint16(a.ManufacturerData()[0:2]), a.ManufacturerData()[2:])
 	}); err != nil && err != context.Canceled {
-		return err
+		return fmt.Errorf("%w: %v", ErrScan, err)
 	}
 
 	if watchdogErr {
-		return fmt.Errorf("watchdog failure: no advertisement processed for more than %v", watchdogTimeout)
+		return fmt.Errorf("%w: timed out (%v)", ErrWatchdog, watchdogTimeout)
 	}
 	return nil
 }
