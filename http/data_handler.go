@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/s5i/ruuvi2db/data"
+	"github.com/s5i/ruuvi2db/storage/database/bolt"
 )
 
-func dataHandler(db DB) http.HandlerFunc {
+func dataHandler(db *bolt.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		endTime, err := dataEndTime(r)
 		if err != nil {
@@ -31,7 +32,12 @@ func dataHandler(db DB) http.HandlerFunc {
 			return
 		}
 
-		src := db.Get(endTime.Add(-duration), endTime)
+		src, err := db.Points(endTime.Add(-duration), endTime)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
 		m := map[time.Time]map[string]any{}
 		for _, p := range src {
 			if m[p.Timestamp] == nil {
@@ -64,7 +70,7 @@ func dataHandler(db DB) http.HandlerFunc {
 	}
 }
 
-func dataValue(p data.Point, kind string) any {
+func dataValue(p *data.Point, kind string) any {
 	switch kind {
 	case "temperature":
 		return fmt.Sprintf("%.2f", p.Temperature)

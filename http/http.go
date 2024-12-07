@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/s5i/ruuvi2db/config"
-	"github.com/s5i/ruuvi2db/data"
+	"github.com/s5i/ruuvi2db/storage/database/bolt"
 )
 
-func Run(ctx context.Context, cfg *config.Config, db DB) error {
+func Run(ctx context.Context, cfg *config.Config, db *bolt.DB) error {
 	if !cfg.HTTP.Enable {
 		return nil
 	}
@@ -76,8 +76,4 @@ func contentType(fName string) string {
 	default:
 		return "text/plain"
 	}
-}
-
-type DB interface {
-	Get(startTime, endTime time.Time) []data.Point
 }

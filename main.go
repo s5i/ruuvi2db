@@ -14,11 +14,11 @@ import (
 	"github.com/s5i/goutil/version"
 	"github.com/s5i/ruuvi2db/config"
 	"github.com/s5i/ruuvi2db/data"
-	"github.com/s5i/ruuvi2db/database"
 	"github.com/s5i/ruuvi2db/http"
 	"github.com/s5i/ruuvi2db/licenses"
 	"github.com/s5i/ruuvi2db/reader/bluetooth"
 	"github.com/s5i/ruuvi2db/reader/protocol"
+	"github.com/s5i/ruuvi2db/storage/database/bolt"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 	fVersion            = flag.Bool("version", false, "When true, print version and exit.")
 	fConfigPathOverride = flag.String("config_path", "", "Path to config file.")
 	fCreateConfig       = flag.Bool("create_config", false, "If true, create example config file and exit.")
-	fRewriteDB          = flag.Bool("rewrite_db", false, "If true, rewrite database and exit.")
+	fAllowRewriteDB     = flag.Bool("allow_rewrite_db", false, "Allows database to be rewritten to a newer schema.")
 )
 
 func main() {
@@ -59,14 +59,7 @@ func main() {
 	setupHumanNames(cfg)
 
 	buffer := data.NewBuffer(cfg.General.MaxDatapointStaleness)
-	db := database.NewDB()
-
-	if *fRewriteDB {
-		if err := db.Rewrite(); err != nil {
-			os.Exit(exitDBRewriteFailed)
-		}
-		os.Exit(exitOK)
-	}
+	db := bolt.New()
 
 	wg.Add(1)
 	go func() {
@@ -139,7 +132,7 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 		if !(data.HasHumanName(res.Address) || cfg.General.LogUnknownDevices) {
 			return
 		}
-		buffer.Push(*res)
+		buffer.Push(res)
 	}, cfg.Bluetooth.WatchdogTimeout); err != nil {
 		log.Printf("bluetooth.Run failed: %v", err)
 		fmt.Fprintln(os.Stderr, "Can't run bluetooth; please grant necessary capabilities:")
@@ -148,14 +141,18 @@ func runBluetooth(ctx context.Context, cfg *config.Config, buffer *data.Buffer) 
 	}
 }
 
-func runDB(ctx context.Context, cfg *config.Config, db db) {
-	if err := db.Run(ctx, cfg); err != nil {
+func runDB(ctx context.Context, cfg *config.Config, db *bolt.DB) {
+	if err := db.Run(ctx, &bolt.Config{
+		Path:            cfg.Database.Path,
+		RetentionWindow: cfg.Database.RetentionWindow,
+		AllowRewrite:    *fAllowRewriteDB,
+	}); err != nil {
 		log.Printf("db.Run failed: %v", err)
 		os.Exit(exitRunDBFailed)
 	}
 }
 
-func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, db db) {
+func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, db *bolt.DB) {
 	for {
 		if cfg.Debug.DumpReadings {
 			buffer.Print()
@@ -165,7 +162,7 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 		for i := range data {
 			data[i].Timestamp = ts
 		}
-		db.Push(data)
+		db.PushPoints(data)
 
 		select {
 		case <-time.After(cfg.General.LogRate):
@@ -175,16 +172,11 @@ func refreshLoop(ctx context.Context, cfg *config.Config, buffer *data.Buffer, d
 	}
 }
 
-func runHTTP(ctx context.Context, cfg *config.Config, db http.DB) {
+func runHTTP(ctx context.Context, cfg *config.Config, db *bolt.DB) {
 	if err := http.Run(ctx, cfg, db); err != nil {
 		log.Printf("http.Run failed: %v", err)
 		os.Exit(exitRunHTTPFailed)
 	}
-}
-
-type db interface {
-	Push(points []data.Point)
-	Run(ctx context.Context, cfg *config.Config) error
 }
 
 const (

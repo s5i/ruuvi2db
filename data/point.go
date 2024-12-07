@@ -20,16 +20,8 @@ type Point struct {
 	Battery     float64 `json:",omitempty"`
 }
 
-// Name returns Point's human name (if available) or its address.
-func (d Point) Name() string {
-	if n := humanNames[strings.ToLower(d.Address)]; n != "" {
-		return n
-	}
-	return d.Address
-}
-
 func (d Point) String() string {
-	return fmt.Sprintf("%s: (%.2f °C, %.2f%% humid, %.2f hPa)", d.Name(), d.Temperature, d.Humidity, d.Pressure)
+	return fmt.Sprintf("%s @ %v: %.2f °C, %.2f%% humid, %.2f hPa, %.2f mV", d.Address, d.Timestamp.Format(time.DateTime), d.Temperature, d.Humidity, d.Pressure, d.Battery)
 }
 
 func (d Point) Encode() ([]byte, error) {
@@ -49,11 +41,11 @@ func (d Point) Encode() ([]byte, error) {
 	return b, nil
 }
 
-func DecodePoint(b []byte) (Point, error) {
+func DecodePoint(b []byte) (*Point, error) {
 	if got, want := len(b), 46; got != want {
-		return Point{}, fmt.Errorf("got %d bytes, want %d", got, want)
+		return nil, fmt.Errorf("got %d bytes, want %d", got, want)
 	}
-	return Point{
+	return &Point{
 		Timestamp:   time.Unix(0, int64(binary.BigEndian.Uint64(b[0:8]))),
 		Temperature: math.Float64frombits(binary.BigEndian.Uint64(b[8:16])),
 		Humidity:    math.Float64frombits(binary.BigEndian.Uint64(b[16:24])),
