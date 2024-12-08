@@ -10,8 +10,6 @@ import (
 	"github.com/s5i/goutil/shutdown"
 	"github.com/s5i/goutil/version"
 	"github.com/s5i/ruuvi2db/licenses"
-	"github.com/s5i/ruuvi2db/reader"
-	"github.com/s5i/ruuvi2db/storage"
 	"github.com/s5i/ruuvi2db/ui"
 	"golang.org/x/sync/errgroup"
 
@@ -51,7 +49,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go shutdown.OnSignal(os.Interrupt, cancel)
 
-	cfg, err := ReadConfig(*fConfig)
+	cfg, err := ui.ReadConfig(*fConfig)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -69,15 +67,5 @@ func main() {
 		}
 	}()
 
-	if cfg.Reader != nil {
-		reader.Run(ctx, g, cfg.Reader)
-	}
-
-	if cfg.Storage != nil {
-		storage.Run(ctx, g, cfg.Storage)
-	}
-
-	if cfg.UI != nil {
-		ui.Run(ctx, g, cfg.UI)
-	}
+	ui.Run(ctx, g, cfg)
 }

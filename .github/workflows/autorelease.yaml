@@ -24,7 +24,13 @@ jobs:
         run: GOOS=linux GOARCH=arm go build -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
 
       - name: Build reader
-        run: GOOS=linux GOARCH=arm go build -C reader -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
+        run: GOOS=linux GOARCH=arm go build -C reader/bin -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
+
+      - name: Build storage
+        run: GOOS=linux GOARCH=arm go build -C storage/bin -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
+
+      - name: Build ui
+        run: GOOS=linux GOARCH=arm go build -C ui/bin -ldflags "-X 'github.com/s5i/goutil/version.External=${{ github.ref }}'"
 
       - name: Create Release
         id: create_release
@@ -53,6 +59,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./reader/reader
-          asset_name: reader
+          asset_path: ./reader/bin/bin
+          asset_name: ruuvi2db-reader
+          asset_content_type: application/octet-stream
+
+      - name: Upload storage
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./storage/bin/bin
+          asset_name: ruuvi2db-storage
+          asset_content_type: application/octet-stream
+
+      - name: Upload ui
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./ui/bin/bin
+          asset_name: ruuvi2db-ui
           asset_content_type: application/octet-stream

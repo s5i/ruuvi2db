@@ -10,32 +10,31 @@ import (
 	"github.com/s5i/goutil/shutdown"
 	"github.com/s5i/goutil/version"
 	"github.com/s5i/ruuvi2db/licenses"
-	"github.com/s5i/ruuvi2db/reader"
 	"github.com/s5i/ruuvi2db/storage"
-	"github.com/s5i/ruuvi2db/ui"
 	"golang.org/x/sync/errgroup"
 
 	_ "net/http/pprof"
 )
 
 var (
-	fConfig      = flag.String("config", "", "Path to config file.")
-	fLicenses    = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
-	fVersion     = flag.Bool("version", false, "When true, print version and exit.")
-	fDebugListen = flag.String("debug_listen", "", "If set, opens a debug port.")
+	fConfig         = flag.String("config", "", "Path to config file.")
+	fLicenses       = flag.Bool("licenses", false, "When true, print attached licenses and exit.")
+	fVersion        = flag.Bool("version", false, "When true, print version and exit.")
+	fDebugListen    = flag.String("debug_listen", "", "If set, opens a debug port.")
+	fAllowRewriteDB = flag.Bool("allow_rewrite_db", false, "Allows database to be rewritten to a newer schema.")
 )
 
 func main() {
 	flag.Parse()
 
-	if *fVersion {
-		fmt.Fprintln(os.Stderr, version.Get())
-		os.Exit(0)
-	}
-
 	if *fLicenses {
 		fmt.Fprintln(os.Stderr, licenses.Merged())
 		os.Exit(0)
+	}
+
+	if *fVersion {
+		fmt.Fprintln(os.Stderr, version.Get())
+		return
 	}
 
 	if debugListen := *fDebugListen; debugListen != "" {
@@ -51,7 +50,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go shutdown.OnSignal(os.Interrupt, cancel)
 
-	cfg, err := ReadConfig(*fConfig)
+	cfg, err := storage.ReadConfig(*fConfig)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -69,15 +68,5 @@ func main() {
 		}
 	}()
 
-	if cfg.Reader != nil {
-		reader.Run(ctx, g, cfg.Reader)
-	}
-
-	if cfg.Storage != nil {
-		storage.Run(ctx, g, cfg.Storage)
-	}
-
-	if cfg.UI != nil {
-		ui.Run(ctx, g, cfg.UI)
-	}
+	storage.Run(ctx, g, cfg)
 }

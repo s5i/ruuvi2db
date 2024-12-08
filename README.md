@@ -32,13 +32,23 @@ Supported databases:
 ## Installation
 
 ```sh
+# Create a non-privileged user.
+sudo useradd -m ruuvi2db
+sudo su - ruuvi2db
+
+# Download the binary.
 wget https://github.com/s5i/ruuvi2db/releases/latest/download/ruuvi2db
 chmod +x ./ruuvi2db
 
-sudo mkdir -p /usr/local/ruuvi2db
-sudo mv ./ruuvi2db /usr/local/ruuvi2db
-sudo chown root:root /usr/local/ruuvi2db/ruuvi2db
+# Grant the necessary capabilities (raw bluetooth, privileged ports).
+sudo setcap "cap_net_raw,cap_net_admin,cap_net_bind_service=ep" ./ruuvi2db
 
+# Set up the config.
+mkdir -p ~/.ruuvi2db/
+wget https://raw.githubusercontent.com/s5i/ruuvi2db/refs/heads/master/config_example.yaml -O ~/.ruuvi2db/ruuvi2db.cfg
+"${EDITOR:-vi}" ~/.ruuvi2db/ruuvi2db.cfg
+
+# Set up the systemd service.
 sudo tee /etc/systemd/system/ruuvi2db.service << EOF > /dev/null
 [Unit]
 Description=ruuvi2db Service
@@ -46,32 +56,21 @@ Requires=network.target
 Requires=bluetooth.target
 
 [Service]
+User=ruuvi2db
 Type=simple
 ExecStartPre=sleep 10
-ExecStart=/usr/local/ruuvi2db/ruuvi2db
+ExecStart=/home/ruuvi2db/ruuvi2db
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-sudo /usr/local/ruuvi2db/ruuvi2db --create_config
-
-# Change as desired.
-sudo vim /usr/local/ruuvi2db/config.yaml
-
 sudo systemctl enable ruuvi2db
 sudo systemctl start ruuvi2db
-```
 
-ruuvi2db can also be ran without root privileges.
-
-* Default BoltDB path requires root; change as desired.
-* Default HTTP port is 8080. Can be overridden in config.
-* Raw capture capabilities need to be granted.
-
-```sh
-sudo setcap "cap_net_raw,cap_net_admin=ep" "$(which ruuvi2db)"
+# Set up aliases.
+curl "http://localhost:8082/admin/set_alias?addr=AA:AA:AA:AA:AA:AA&name=AA"
 ```
 
 ## Not there yet

@@ -35,7 +35,8 @@ function refresh() {
     document.getElementById('graph-' + kind).style.backgroundColor = "lightgray";
   });
 
-  fetch('/tags.json').then(resp => { return resp.json() }).then(tags => {
+  fetch('/aliases.json').then(resp => { return resp.json() }).then(aliases => {
+    let tags = Object.values(aliases);
     let updateKind = (kind) => {
       return new Promise(async (resolve, _) => {
         let promises = [];

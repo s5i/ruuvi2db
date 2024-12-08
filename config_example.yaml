@@ -1,0 +1,40 @@
+ui:
+  provided_endpoints:
+    ui: ":80"
+
+  consumed_endpoints:
+    storage: "localhost:8081"
+
+storage:
+  provided_endpoints:
+    data: "localhost:8081"
+    admin: "localhost:8082"
+
+  consumed_endpoints:
+    reader: "localhost:8080"
+
+  reader_consumer:
+    query_period: "1m"
+    max_staleness: "2m"
+    mac_filter:
+      - "AA:AA:AA:AA:AA:AA"
+      - "BB:BB:BB:BB:BB:BB"
+
+  database:
+    bolt:
+      path: "~/.ruuvi2db/data.boltdb"
+      retention_window: "8760h"
+      allow_schema_update: false
+
+reader:
+  provided_endpoints:
+    data: "localhost:8080"
+
+  bluetooth:
+    watchdog_timeout: "5m"
+
+  data:
+    max_staleness: "5m"
+    mac_filter:
+      - "AA:AA:AA:AA:AA:AA"
+      - "BB:BB:BB:BB:BB:BB"

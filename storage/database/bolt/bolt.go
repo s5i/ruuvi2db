@@ -17,9 +17,9 @@ import (
 
 // Config contains options for Bolt database.
 type Config struct {
-	Path            string
-	RetentionWindow time.Duration
-	AllowRewrite    bool
+	Path              string
+	RetentionWindow   time.Duration
+	AllowSchemaUpdate bool
 }
 
 // New returns an object that can be used to connect and push to Bolt DB.
@@ -29,6 +29,7 @@ func New() *DB {
 		pointsCh:        make(chan pointsReq),
 		setAliasCh:      make(chan setAliasReq),
 		getAliasCh:      make(chan getAliasReq),
+		listAliasesCh:   make(chan listAliasesReq),
 		retentionTicker: make(chan time.Time),
 	}
 }
@@ -44,7 +45,7 @@ func (d *DB) Run(ctx context.Context, cfg *Config) error {
 	}
 	defer db.Close()
 
-	if err := initDB(db, cfg.AllowRewrite); err != nil {
+	if err := initDB(db, cfg.AllowSchemaUpdate); err != nil {
 		return err
 	}
 
@@ -72,6 +73,9 @@ func (d *DB) Run(ctx context.Context, cfg *Config) error {
 			req.execute(db)
 
 		case req := <-d.getAliasCh:
+			req.execute(db)
+
+		case req := <-d.listAliasesCh:
 			req.execute(db)
 
 		case <-d.retentionTicker:
@@ -129,11 +133,22 @@ func (d *DB) Alias(addr string) (string, error) {
 	return resp.alias, resp.err
 }
 
+// ListAliases returns an alias for a MAC address.
+func (d *DB) ListAliases() (map[string]string, error) {
+	respCh := make(chan listAliasesResp, 1)
+	d.listAliasesCh <- listAliasesReq{
+		respCh: respCh,
+	}
+	resp := <-respCh
+	return resp.aliases, resp.err
+}
+
 type DB struct {
 	pushPointsCh    chan pushPointsReq
 	pointsCh        chan pointsReq
 	setAliasCh      chan setAliasReq
 	getAliasCh      chan getAliasReq
+	listAliasesCh   chan listAliasesReq
 	retentionTicker <-chan time.Time
 }
 
@@ -312,6 +327,35 @@ func (req *getAliasReq) execute(db *bolt.DB) {
 	req.respCh <- getAliasResp{alias: alias}
 }
 
+type listAliasesReq struct {
+	respCh chan listAliasesResp
+}
+
+type listAliasesResp struct {
+	aliases map[string]string
+	err     error
+}
+
+func (req *listAliasesReq) execute(db *bolt.DB) {
+	aliases := map[string]string{}
+	if err := db.View(func(tx *bolt.Tx) error {
+		root := tx.Bucket([]byte(aliasesRoot))
+		if root == nil {
+			return nil
+		}
+
+		root.ForEach(func(addr, alias []byte) error {
+			aliases[string(addr)] = string(alias)
+			return nil
+		})
+
+		return nil
+	}); err != nil {
+		req.respCh <- listAliasesResp{err: err}
+	}
+	req.respCh <- listAliasesResp{aliases: aliases}
+}
+
 func executeRetention(db *bolt.DB, retention time.Duration) {
 	if retention <= 0 {
 		return
@@ -403,7 +447,7 @@ const (
 	pointsWindowSize = 24 * time.Hour
 )
 
-func initDB(db *bolt.DB, allowRewrite bool) error {
+func initDB(db *bolt.DB, allowSchemaUpdate bool) error {
 	v := 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		if root := tx.Bucket([]byte(metadataRoot)); root != nil {
@@ -444,8 +488,8 @@ func initDB(db *bolt.DB, allowRewrite bool) error {
 			})
 
 		default:
-			if !allowRewrite {
-				return fmt.Errorf("detected old DB schema version %d, want %d; requires AllowRewrite to proceed", v, metadataVersionCurrent)
+			if !allowSchemaUpdate {
+				return fmt.Errorf("detected old DB schema version %d, want %d; requires AllowSchemaUpdate to proceed", v, metadataVersionCurrent)
 			}
 		}
 

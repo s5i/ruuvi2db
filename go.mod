@@ -6,7 +6,6 @@ require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/go-ble/ble v0.0.0-20230130210458-dd4b07d15402
 	github.com/s5i/goutil v0.0.0-20241204205921-85dcdeba604a
-	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	golang.org/x/sync v0.9.0
 	gopkg.in/yaml.v2 v2.4.0
 )
