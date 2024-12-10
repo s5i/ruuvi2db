@@ -45,7 +45,7 @@ sudo setcap "cap_net_raw,cap_net_admin,cap_net_bind_service=ep" ./ruuvi2db
 
 # Set up the config.
 mkdir -p ~/.ruuvi2db/
-wget https://raw.githubusercontent.com/s5i/ruuvi2db/refs/heads/master/config_example.yaml -O ~/.ruuvi2db/ruuvi2db.cfg
+wget https://raw.githubusercontent.com/s5i/ruuvi2db/refs/heads/master/example.cfg -O ~/.ruuvi2db/ruuvi2db.cfg
 "${EDITOR:-vi}" ~/.ruuvi2db/ruuvi2db.cfg
 
 # Set up the systemd service.
@@ -72,6 +72,28 @@ sudo systemctl start ruuvi2db
 # Set up aliases.
 curl "http://localhost:8082/admin/set_alias?addr=AA:AA:AA:AA:AA:AA&name=AA"
 ```
+### Docker (experimental)
+
+```sh
+# Choose the docker mountpoint.
+export RUUVI2DB_CONFIG_DIR="/docker/ruuvi2db/cfg"
+export RUUVI2DB_DATA_DIR="/docker/ruuvi2db/data"
+
+# Create and start the container.
+docker run -d \
+  --name ruuvi2db \
+  -v "${RUUVI2DB_CONFIG_DIR}:/cfg" \
+  -v "${RUUVI2DB_DATA_DIR}:/data" \
+  --restart=always \
+  --net=host --cap-add NET_RAW --cap-add NET_ADMIN \
+  shyym/ruuvi2db
+
+# Edit the skeleton config.
+${EDITOR:-vi} ${RUUVI2DB_CONFIG_DIR}/ruuvi2db.cfg
+```
+
+Note: `--net=host --cap-add NET_RAW --cap-add NET_ADMIN` are only required for
+the `reader` module.
 
 ## Not there yet
 
