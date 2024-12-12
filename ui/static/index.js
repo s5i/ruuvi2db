@@ -1,5 +1,5 @@
-function refresh() {
-  document.getElementById('error').innerText = '';
+async function refresh() {
+  setError('');
   let end_time_str = document.getElementById('end_time').value || "now";
   let end_time = NaN;
   if (end_time_str === "now") {
@@ -12,67 +12,71 @@ function refresh() {
     end_time = Math.floor(new Date(end_time_str) / 1000);
   }
   if (isNaN(end_time)) {
-    document.getElementById('error').innerText = 'Bad end time.';
+    setError('Bad end time.');
     return;
   }
 
   let duration = parseDuration(document.getElementById('duration').value || "1d");
   if (duration === undefined) {
-    document.getElementById('error').innerText = 'Bad duration.';
+    setError('Bad duration.');
     return;
   }
 
-  let end_time_trunc = end_time - (end_time % 3600);
-  if (end_time_trunc != end_time) {
-    end_time_trunc += 3600;
-  }
+  let aliases = await fetch('/aliases.json').then(resp => { return resp.json() });
+  kinds().map((kind) => {
+    setGraphStaleness(kind, true);
 
-  let start_time = end_time - duration;
-  let start_time_trunc = start_time - ((start_time) % 3600);
+    return new Promise(async (_resolve, _error) => {
+      let resolution = Math.max(Math.floor(10 * duration / graph(kind).scrollWidth), 1);
+      let end_time_trunc = end_time - (end_time % duration);
+      Promise.all([
+        fetch(`/data.json?kind=${kind}&end_time=${end_time_trunc}&duration=${duration}&resolution=${resolution}`).then(resp => { return resp.json() }),
+        fetch(`/data.json?kind=${kind}&end_time=${end_time_trunc + duration}&duration=${duration}&resolution=${resolution}`).then(resp => { return resp.json() })
+      ]).then((data) => {
+        let names = {};
+        data = data.flat();
 
-  let kinds = ["temperature", "humidity", "pressure", "battery"];
-  kinds.map((kind) => {
-    document.getElementById('graph-' + kind).style.backgroundColor = "lightgray";
-  });
+        for (i in data) {
+          data[i]['ts'] = new Date(data[i]['ts']);
+          let ts = data[i]['ts'] / 1000;
+          if (ts < end_time - duration || ts > end_time) {
+            delete data[i];
+            continue
+          }
 
-  fetch('/aliases.json').then(resp => { return resp.json() }).then(aliases => {
-    let tags = Object.values(aliases);
-    let updateKind = (kind) => {
-      return new Promise(async (resolve, _) => {
-        let promises = [];
-        for (let et = end_time_trunc; et > start_time_trunc; et -= 3600) {
-          promises.push(fetch(`/data.json?kind=${kind}&end_time=${et}&duration=3600`).then(resp => { return resp.json() }));
-        }
-        Promise.all(promises).then((values) => {
-          let preFilterData = values.flat();
-          let skip = Math.max(Math.floor(preFilterData.length / 250), 1);
-          let begin = preFilterData.length % skip;
-          let data = [];
-          for (let i = begin; i < preFilterData.length; i += skip) {
-            preFilterData[i]['ts'] = new Date(preFilterData[i]['ts']);
-            let ts = Math.floor(preFilterData[i]['ts'] / 1000);
-            if (ts < start_time || ts > end_time) {
+          for (k in data[i]) {
+            if (k == 'ts') {
               continue;
             }
-            data.push(preFilterData[i]);
-          }
 
-          for (i in data) {
-            data[i]['ts'] = new Date(data[i]['ts']);
+            let name = aliases[k] || k;
+            names[name] = true;
+            if (name != k) {
+              data[i][name] = data[i][k];
+              delete data[i][k];
+            }
           }
-          graph(kind, data, tags)
-          document.getElementById('graph-' + kind).style.backgroundColor = null;
-        });
+        }
 
+        plot(kind, data, Object.keys(names))
+        setGraphStaleness(kind, false);
       });
-    };
-    kinds.map((kind) => updateKind(kind));
+
+    });
   });
 }
 
-function graph(kind, data, tags) {
+function graph(kind) {
+  return Array.from(document.getElementsByClassName("graph")).filter((graph) => { return graph.getAttribute("data-kind") == kind })[0]
+}
+
+function kinds() {
+  return Array.from(document.getElementsByClassName("graph")).map((graph) => { return graph.getAttribute("data-kind") })
+}
+
+function plot(kind, data, tags) {
   c3.generate({
-    bindto: '#graph-' + kind,
+    bindto: "#" + graph(kind).id,
     data: {
       json: data,
       keys: { x: 'ts', value: tags },
@@ -103,6 +107,14 @@ function graph(kind, data, tags) {
   });
 }
 
+function setError(error) {
+  document.getElementById('error').innerText = error;
+}
+
+function setGraphStaleness(kind, isStale) {
+  graph(kind).style.backgroundColor = isStale ? "lightgray" : null;
+}
+
 function parseDuration(str) {
   var durMap = {
     'w': 604800,
@@ -131,18 +143,18 @@ function parseDuration(str) {
   }
 }
 
-function bindEnter() {
-  document.getElementById("end_time").addEventListener("keyup", function (event) {
-    if (event.key === "Enter") {
-      refresh();
-    }
+function init() {
+  Array.from(document.getElementsByClassName("graph")).map((graph) => {
+    graph.id = "id" + Math.random().toString(16).slice(2);
+  })
+  Array.from(document.getElementsByTagName("input")).map((input) => {
+    input.addEventListener("keyup", function (event) {
+      if (event.key === "Enter") {
+        refresh();
+      }
+    })
   });
-  document.getElementById("duration").addEventListener("keyup", function (event) {
-    if (event.key === "Enter") {
-      refresh();
-    }
-  });
+  refresh();
 }
 
-bindEnter();
-refresh();
+init();

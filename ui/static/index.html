@@ -1,25 +1,47 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <title>Ruuvi</title>
+
+<head>
+    <style>
+        .graph {
+            width: 100%;
+            min-height: 300px;
+        }
+
+        #error {
+            color: red;
+        }
+    </style>
+</head>
+
 <body>
-<label for="duration">Duration:</label>
-<input id="duration" placeholder="1w3d6h10m30s" value="1d">
-<br>
-<label for="end_time">End time:</label>
-<input id="end_time" placeholder="now, -1d, 2000-01-01T08:32Z" value="now">
-<br>
-<button id="refresh" onclick="refresh()">Refresh</button>
-<div id="error" style="color:red;"></div>
-<h1>Temperature (°C)</h1>
-<div id="graph-temperature" style="width:100%;min-height:300px;"></div>
-<h1>Humidity (%)</h1>
-<div id="graph-humidity" style="width:100%;min-height:300px;"></div>
-<h1>Pressure (hPa)</h1>
-<div id="graph-pressure" style="width:100%;min-height:300px;"></div>
-<h1>Battery (mV)</h1>
-<div id="graph-battery" style="width:100%;min-height:300px;"></div>
-<link href="c3.min.css" rel="stylesheet">
-<script src="d3.v5.min.js"></script>
-<script src="c3.min.js"></script>
-<script src="index.js"></script>
+    <label for="duration">Duration:</label>
+    <input id="duration" placeholder="1w3d6h10m30s" value="1d">
+    <br>
+
+    <label for="end_time">End time:</label>
+    <input id="end_time" placeholder="now, -1d, 2000-01-01T08:32Z" value="now">
+    <br>
+
+    <button id="refresh" onclick="refresh()">Refresh</button>
+
+    <div id="error"></div>
+
+    <h1>Temperature (°C)</h1>
+    <div class="graph" data-kind="temperature"></div>
+
+    <h1>Humidity (%)</h1>
+    <div class="graph" data-kind="humidity"></div>
+
+    <h1>Pressure (hPa)</h1>
+    <div class="graph" data-kind="pressure"></div>
+
+    <h1>Battery (mV)</h1>
+    <div class="graph" data-kind="battery"></div>
+
+    <link href="c3.min.css" rel="stylesheet">
+    <script src="d3.v5.min.js"></script>
+    <script src="c3.min.js"></script>
+    <script src="index.js"></script>
 </body>

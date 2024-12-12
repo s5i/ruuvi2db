@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
@@ -79,11 +80,18 @@ func DataHandler(opts *DataHandlerOpts) http.HandlerFunc {
 			return
 		}
 
+		resolution, err := dataResolution(r)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
 		src, err := opts.PointsF(endTime.Add(-duration), endTime)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+		src = align(src, resolution, 2*resolution)
 
 		w.Header().Set("Content-Type", "application/json")
 
@@ -97,13 +105,8 @@ func DataHandler(opts *DataHandlerOpts) http.HandlerFunc {
 				m[p.Timestamp] = map[string]any{}
 			}
 
-			name, err := opts.AliasF(p.Address)
-			if err != nil || name == "" {
-				name = p.Address
-			}
-
 			m[p.Timestamp]["ts"] = p.Timestamp
-			m[p.Timestamp][name] = dataValue(p, kind)
+			m[p.Timestamp][p.Address] = dataValue(p, kind)
 		}
 
 		ret := []map[string]any{}
@@ -160,25 +163,31 @@ func dataValue(p *data.Point, kind string) any {
 	return nil
 }
 
+var kinds = []string{"temperature", "humidity", "pressure", "battery"}
+
 func dataKind(r *http.Request) (string, error) {
-	x, err := singleStringParam(r, "kind")
+	x, ok, err := singleStringParam(r, "kind")
 	if err != nil {
 		return "", err
 	}
+	if !ok {
+		return "", fmt.Errorf("kind not specified")
+	}
 
-	switch x {
-	case "temperature", "humidity", "pressure", "battery":
-	default:
-		return "", fmt.Errorf("unrecognized kind %q", x)
+	if !slices.Contains(kinds, x) {
+		return "", fmt.Errorf("unrecognized kind %q; valid: %q", x, kinds)
 	}
 
 	return x, nil
 }
 
 func dataEndTime(r *http.Request) (time.Time, error) {
-	x, err := singleStringParam(r, "end_time")
+	x, ok, err := singleStringParam(r, "end_time")
 	if err != nil {
 		return time.Time{}, err
+	}
+	if !ok {
+		return time.Now(), nil
 	}
 
 	ret, err := strconv.ParseInt(x, 10, 64)
@@ -190,9 +199,12 @@ func dataEndTime(r *http.Request) (time.Time, error) {
 }
 
 func dataDuration(r *http.Request) (time.Duration, error) {
-	x, err := singleStringParam(r, "duration")
+	x, ok, err := singleStringParam(r, "duration")
 	if err != nil {
 		return 0, err
+	}
+	if !ok {
+		return time.Hour, nil
 	}
 
 	ret, err := strconv.ParseInt(x, 10, 64)
@@ -201,4 +213,119 @@ func dataDuration(r *http.Request) (time.Duration, error) {
 	}
 
 	return time.Duration(ret) * time.Second, nil
+}
+
+func dataResolution(r *http.Request) (time.Duration, error) {
+	x, ok, err := singleStringParam(r, "resolution")
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("empty resolution")
+	}
+
+	ret, err := strconv.ParseInt(x, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("malformed resolution %q", x)
+	}
+
+	return time.Duration(ret) * time.Second, nil
+}
+
+func align(src []*data.Point, resolution time.Duration, maxGap time.Duration) []*data.Point {
+	if resolution == 0 {
+		return src
+	}
+	raw := map[string][]*data.Point{}
+	for _, p := range src {
+		raw[p.Address] = append(raw[p.Address], p)
+	}
+	for addr := range raw {
+		slices.SortFunc(raw[addr], func(a, b *data.Point) int {
+			return int(a.Timestamp.Unix() - b.Timestamp.Unix())
+		})
+	}
+	sorted := raw
+	aligned := map[string][]*data.Point{}
+
+	for addr, pts := range sorted {
+		if len(pts) == 0 {
+			continue
+		}
+
+		get := func(i int) (*data.Point, bool) {
+			if i < 0 || i >= len(pts) {
+				return nil, false
+			}
+			return pts[i], true
+		}
+
+		for i, outTS, maxTS := 0, pts[0].Timestamp.Truncate(resolution), pts[len(pts)-1].Timestamp; ; {
+			left, leftOk := get(i)
+			right, rightOk := get(i + 1)
+
+			// left and right are two neighboring points.
+			// outTS is the timestamp at which we'd like to output a point.
+			// We can output a point if either:
+			// - we have an exact timestamp match
+			// - outTS lies between left and right and they're not spread apart more than maxGap
+
+			// Basic checks: no more points / output TS out of range.
+			if outTS.After(maxTS) {
+				break
+			}
+
+			// Skip output TS if it'd fall to the left of interpolation window.
+			if leftOk && outTS.Before(left.Timestamp) {
+				outTS = outTS.Add(resolution)
+				continue
+			}
+
+			// Skip input point if the desired timestamp would fall to the right of interpolation window.
+			if rightOk && right.Timestamp.Before(outTS) {
+				i++
+				continue
+			}
+
+			// Exact match; output point, move to next output TS.
+			if left.Timestamp.Equal(outTS) {
+				aligned[addr] = append(aligned[addr], left)
+				outTS = outTS.Add(resolution)
+				continue
+			}
+
+			// No more "right" points, can't perform any more interpolations (and we already checked exact match).
+			if !rightOk {
+				break
+			}
+
+			// Interpolation window too wide, skip to the next one.
+			if right.Timestamp.Sub(left.Timestamp) > maxGap {
+				i++
+				continue
+			}
+
+			// outTS lies in a narrow enough interpolation window.
+			// Calculate linear extrapolation coefficient.
+			// 0 if outTS == left.Timestamp, 1 if outTS == right.Timestamp
+			// out.Field = left.Field + coeff * (right.Field - left.Field)
+			coeff := float64(outTS.Sub(left.Timestamp)) / float64(right.Timestamp.Sub(left.Timestamp))
+
+			aligned[addr] = append(aligned[addr], &data.Point{
+				Address:     left.Address,
+				Timestamp:   outTS,
+				Temperature: left.Temperature + coeff*(right.Temperature-left.Temperature),
+				Humidity:    left.Humidity + coeff*(right.Humidity-left.Humidity),
+				Pressure:    left.Pressure + coeff*(right.Pressure-left.Pressure),
+				Battery:     left.Battery + coeff*(right.Battery-left.Battery),
+			})
+			outTS = outTS.Add(resolution)
+		}
+	}
+
+	var ret []*data.Point
+	for _, pts := range aligned {
+		ret = append(ret, pts...)
+	}
+	return ret
 }

@@ -41,13 +41,16 @@ type SetAliasHandlerOpts struct {
 
 func SetAliasHandler(opts *SetAliasHandlerOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		addr, err := singleStringParam(r, "addr")
+		addr, ok, err := singleStringParam(r, "addr")
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+		if !ok {
+			http.Error(w, "addr not specified", 500)
+		}
 
-		name, err := singleStringParam(r, "name")
+		name, _, err := singleStringParam(r, "name")
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
