@@ -1,0 +1,18 @@
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+*
+
+!.gitignore
+!Dockerfile
+!*.go
+!*.html
+!*.proto
+!*.sh
+!*.yaml
+!*/
+
+!/example.cfg
+!/go.sum
+!/go.mod
+!/README.md
+!/LICENSE
+!/licenses/embed/**
