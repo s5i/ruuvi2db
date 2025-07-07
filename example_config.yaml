@@ -1,8 +1,6 @@
-dry_run: true  # Remove after making desired changes.
-
 ui:
   provided_endpoints:
-    ui: ":80"
+    ui: ":8000"
 
   consumed_endpoints:
     storage: "localhost:7800"
@@ -24,7 +22,7 @@ storage:
 
   database:
     bolt:
-      path: "/data/ruuvi2db.db"
+      path: "/appdata/ruuvi2db.db"
       retention_window: "8760h"
       allow_schema_update: false
 
